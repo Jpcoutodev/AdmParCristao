@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
+import VerificationList from './components/VerificationList';
+import ReportList from './components/ReportList';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -46,23 +48,11 @@ function App() {
         </div>
 
         {/* Content Area */}
-        {activeTab === 'dashboard' && <Dashboard />}
-        {activeTab === 'verification' && (
-          <div className="flex-center" style={{ height: '100%' }}>
-            <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center' }}>
-              <h2>Verificação de Perfis</h2>
-              <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>Lista de perfis aguardando verificação aparecerá aqui.</p>
-            </div>
-          </div>
-        )}
-        {activeTab === 'reports' && (
-          <div className="flex-center" style={{ height: '100%' }}>
-            <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center' }}>
-              <h2>Denúncias</h2>
-              <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>Gerenciamento de denúncias de usuários.</p>
-            </div>
-          </div>
-        )}
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'verification' && <VerificationList />}
+          {activeTab === 'reports' && <ReportList />}
+        </div>
       </main>
     </div>
   );
