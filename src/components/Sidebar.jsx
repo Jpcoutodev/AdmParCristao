@@ -1,28 +1,49 @@
 import React from 'react';
-import { LayoutDashboard, Users, BarChart3, Settings, Shield } from 'lucide-react';
+import { LayoutDashboard, ShieldCheck, AlertTriangle, X } from 'lucide-react';
 
-const Sidebar = ({ activeTab, setActiveTab }) => {
+const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'users', label: 'Usuários', icon: Users },
-    { id: 'analytics', label: 'Análises', icon: BarChart3 },
-    { id: 'settings', label: 'Configurações', icon: Settings },
+    { id: 'verification', label: 'Verificação', icon: ShieldCheck },
+    { id: 'reports', label: 'Denúncias', icon: AlertTriangle },
   ];
 
   return (
-    <div className="glass-panel" style={{ 
-      width: '260px', 
-      height: 'calc(100vh - 2rem)', 
-      margin: '1rem',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '1.5rem'
-    }}>
-      <div className="flex-center" style={{ marginBottom: '3rem', justifyContent: 'flex-start', gap: '1rem' }}>
-        <div style={{ background: 'var(--accent-gradient)', padding: '0.5rem', borderRadius: '8px' }}>
-          <Shield size={24} color="white" />
+    <div
+      className={`glass-panel sidebar-mobile ${isOpen ? 'open' : ''}`}
+      style={{
+        width: '260px',
+        height: 'calc(100vh - 2rem)',
+        margin: '1rem',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '1.5rem',
+        background: 'var(--bg-secondary)', // Solid bg for mobile readability
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ background: 'var(--accent-gradient)', padding: '0.5rem', borderRadius: '8px' }}>
+            <ShieldCheck size={24} color="white" />
+          </div>
+          <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Par Cristão</h2>
         </div>
-        <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Par Cristão</h2>
+
+        {/* Mobile Close Button */}
+        <button
+          onClick={onClose}
+          className="desktop-only-hidden"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            padding: '4px',
+            display: window.innerWidth > 768 ? 'none' : 'block'
+          }}
+        >
+          <X size={24} />
+        </button>
       </div>
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
@@ -32,7 +53,10 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setActiveTab(item.id);
+                if (window.innerWidth <= 768) onClose();
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -60,7 +84,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#333', overflow: 'hidden' }}>
-             <img src="https://ui-avatars.com/api/?name=Admin+User&background=random" alt="Admin" />
+            <img src="https://ui-avatars.com/api/?name=Admin+User&background=random" alt="Admin" />
           </div>
           <div>
             <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>Administrador</p>
