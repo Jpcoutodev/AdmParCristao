@@ -84,8 +84,8 @@ const ReportList = ({ onReportsSeen }) => {
                 </div>
             </div>
 
-            <div className="glass-panel" style={{ overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <div className="glass-panel" style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
                             <th style={{ padding: '1.25rem' }}>Data</th>
