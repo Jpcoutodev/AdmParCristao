@@ -1,11 +1,11 @@
 import React from 'react';
 import { LayoutDashboard, ShieldCheck, AlertTriangle, X } from 'lucide-react';
 
-const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose }) => {
+const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadCount }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'verification', label: 'Verificação', icon: ShieldCheck },
-    { id: 'reports', label: 'Denúncias', icon: AlertTriangle },
+    { id: 'reports', label: 'Denúncias', icon: AlertTriangle, showBadge: true },
   ];
 
   return (
@@ -71,11 +71,27 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose }) => {
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '0.95rem',
                 fontWeight: isActive ? 500 : 400,
-                textAlign: 'left'
+                textAlign: 'left',
+                position: 'relative'
               }}
             >
               <Icon size={20} />
-              {item.label}
+              <span style={{ flex: 1 }}>{item.label}</span>
+
+              {item.showBadge && unreadCount > 0 && (
+                <span style={{
+                  background: '#ef4444',
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  minWidth: '18px',
+                  textAlign: 'center'
+                }}>
+                  {unreadCount}
+                </span>
+              )}
             </button>
           );
         })}

@@ -2,18 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { AlertCircle, Trash2, ShieldOff, CheckCircle } from 'lucide-react';
 
-const ReportList = () => {
+const ReportList = ({ onReportsSeen }) => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [filterStatus, setFilterStatus] = useState('all');
 
     useEffect(() => {
         fetchReports();
-    }, []);
+        if (onReportsSeen) onReportsSeen();
+    }, [filterStatus]);
 
     const fetchReports = async () => {
         setLoading(true);
-        // reporter_id profiles join and reported_id profiles join
-        const { data, error } = await supabase
+        let query = supabase
             .from('reports')
             .select(`
         *,
@@ -21,6 +22,12 @@ const ReportList = () => {
         reported:reported_id(name, id)
       `)
             .order('created_at', { ascending: false });
+
+        if (filterStatus !== 'all') {
+            query = query.eq('status', filterStatus);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error('Error fetching reports:', error);
@@ -47,9 +54,34 @@ const ReportList = () => {
 
     return (
         <div style={{ padding: '2rem', flex: 1, overflowY: 'auto' }}>
-            <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Denúncias</h1>
-                <p style={{ color: 'var(--text-muted)' }}>Gerencie denúncias de comportamento inadequado ou perfis falsos.</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Denúncias</h1>
+                    <p style={{ color: 'var(--text-muted)' }}>Gerencie denúncias de comportamento inadequado ou perfis falsos.</p>
+                </div>
+
+                {/* Filters */}
+                <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.4rem', borderRadius: '10px', border: '1px solid var(--glass-border)' }}>
+                    {['all', 'pending', 'resolved'].map((status) => (
+                        <button
+                            key={status}
+                            onClick={() => setFilterStatus(status)}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                border: 'none',
+                                borderRadius: '7px',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                transition: 'all 0.2s',
+                                background: filterStatus === status ? 'var(--accent-primary)' : 'transparent',
+                                color: filterStatus === status ? 'white' : 'var(--text-secondary)',
+                            }}
+                        >
+                            {status === 'all' ? 'Todas' : status === 'pending' ? 'Pendentes' : status === 'resolved' ? 'Resolvidas' : status}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             <div className="glass-panel" style={{ overflow: 'hidden' }}>
@@ -91,13 +123,15 @@ const ReportList = () => {
                                 </td>
                                 <td style={{ padding: '1.25rem' }}>
                                     <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                        <button
-                                            onClick={() => handleStatusUpdate(report.id, 'resolved')}
-                                            style={{ background: 'transparent', border: 'none', color: '#10b981', cursor: 'pointer' }}
-                                            title="Marcar como resolvido"
-                                        >
-                                            <CheckCircle size={20} />
-                                        </button>
+                                        {report.status === 'pending' && (
+                                            <button
+                                                onClick={() => handleStatusUpdate(report.id, 'resolved')}
+                                                style={{ background: 'transparent', border: 'none', color: '#10b981', cursor: 'pointer' }}
+                                                title="Marcar como resolvido"
+                                            >
+                                                <CheckCircle size={20} />
+                                            </button>
+                                        )}
                                         <button
                                             style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
                                             title="Banir Usuário"
@@ -111,7 +145,7 @@ const ReportList = () => {
                         {reports.length === 0 && (
                             <tr>
                                 <td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                    Nenhuma denúncia encontrada.
+                                    Nenhuma denúncia encontrada para este filtro.
                                 </td>
                             </tr>
                         )}
