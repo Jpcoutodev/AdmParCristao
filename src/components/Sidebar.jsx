@@ -108,6 +108,30 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadCount }) => {
           </div>
         </div>
       </div>
+      {/* Logout */}
+      <div style={{ padding: '1.5rem 0 0' }}> {/* Adjusted padding to align with the top section */}
+        <button
+          onClick={onLogout}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            borderRadius: '10px',
+            color: '#ef4444',
+            cursor: 'pointer',
+            fontWeight: 500,
+            fontSize: '0.9rem',
+            transition: 'all 0.2s'
+          }}
+        >
+          <LogOut size={20} />
+          <span>Sair</span>
+        </button>
+      </div>
     </div>
   );
 };

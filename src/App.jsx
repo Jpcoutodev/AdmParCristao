@@ -1,18 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import VerificationList from './components/VerificationList';
 import ReportList from './components/ReportList';
+import Login from './components/Login';
 
 function App() {
+  const [session, setSession] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [unreadReportsCount, setUnreadReportsCount] = useState(0);
 
-  // Initial fetch for pending reports count
   useEffect(() => {
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Initial fetch for pending reports count (only if logged in)
+  useEffect(() => {
+    if (!session) return;
+
     fetchUnreadCount();
 
     // Subscribe to changes in reports table
@@ -26,7 +46,7 @@ function App() {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, []);
+  }, [session]);
 
   const fetchUnreadCount = async () => {
     const { count, error } = await supabase
@@ -40,10 +60,16 @@ function App() {
   };
 
   const handleReportsSeen = () => {
-    // When the user views the reports tab, we decrement or sync the count
-    // For simplicity, we assume viewing the list "clears" the alert badge
     setUnreadReportsCount(0);
   };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (!session) {
+    return <Login />;
+  }
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)' }}>
@@ -59,6 +85,7 @@ function App() {
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         unreadCount={unreadReportsCount}
+        onLogout={handleLogout}
       />
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
@@ -68,20 +95,26 @@ function App() {
           padding: '1rem',
           borderBottom: '1px solid var(--glass-border)',
           alignItems: 'center',
-          gap: '1rem'
+          gap: '1rem',
+          justifyContent: 'space-between'
         }}>
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-primary)',
-              cursor: 'pointer'
-            }}
-          >
-            <Menu size={24} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-primary)',
+                cursor: 'pointer'
+              }}
+            >
+              <Menu size={24} />
+            </button>
+            <span style={{ fontWeight: 600 }}>Par Cristão Admin</span>
+          </div>
+          <button onClick={handleLogout} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)' }}>
+            <LogOut size={20} />
           </button>
-          <span style={{ fontWeight: 600 }}>Par Cristão Admin</span>
         </div>
 
         {/* Content Area */}
