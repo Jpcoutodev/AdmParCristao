@@ -1,12 +1,15 @@
-import React from 'react';
-import { Users, TrendingUp, Activity, DollarSign } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { Users, ShieldCheck, AlertTriangle, CheckCircle } from 'lucide-react';
 
-const StatCard = ({ title, value, change, icon: Icon, color }) => (
+const StatCard = ({ title, value, icon: Icon, color, loading }) => (
     <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{title}</p>
-                <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{value}</h3>
+                <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>
+                    {loading ? '...' : value}
+                </h3>
             </div>
             <div style={{
                 background: `rgba(${color}, 0.1)`,
@@ -17,14 +20,61 @@ const StatCard = ({ title, value, change, icon: Icon, color }) => (
                 <Icon size={24} />
             </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
-            <span style={{ color: '#10b981', fontWeight: 600 }}>{change}</span>
-            <span style={{ color: 'var(--text-muted)' }}>vs mês anterior</span>
-        </div>
     </div>
 );
 
 const Dashboard = () => {
+    const [stats, setStats] = useState({
+        totalUsers: 0,
+        pendingVerifications: 0,
+        pendingReports: 0,
+        verifiedUsers: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchStats();
+
+        // Subscribe to changes (optional, but good for realtime feel)
+        const channels = [
+            supabase.channel('public:profiles').on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchStats()).subscribe(),
+            supabase.channel('public:verification_requests').on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, () => fetchStats()).subscribe(),
+            supabase.channel('public:reports').on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => fetchStats()).subscribe()
+        ];
+
+        return () => {
+            channels.forEach(channel => supabase.removeChannel(channel));
+        };
+    }, []);
+
+    const fetchStats = async () => {
+        setLoading(true);
+        try {
+            const [
+                { count: totalUsers },
+                { count: pendingVerifications },
+                { count: pendingReports },
+                { count: totalVerified }
+            ] = await Promise.all([
+                supabase.from('profiles').select('*', { count: 'exact', head: true }),
+                supabase.from('verification_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+                supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+                supabase.from('verification_requests').select('*', { count: 'exact', head: true }).eq('status', 'verified')
+            ]);
+
+            setStats({
+                totalUsers: totalUsers || 0,
+                pendingVerifications: pendingVerifications || 0,
+                pendingReports: pendingReports || 0,
+                verifiedUsers: totalVerified || 0
+            });
+        } catch (error) {
+            console.error('Error fetching dashboard stats:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div style={{ padding: '2rem', flex: 1, overflowY: 'auto' }}>
             <div style={{ marginBottom: '2rem' }}>
@@ -40,38 +90,38 @@ const Dashboard = () => {
             }}>
                 <StatCard
                     title="Total de Usuários"
-                    value="12,345"
-                    change="+12%"
+                    value={stats.totalUsers}
                     icon={Users}
                     color="168, 85, 247" // Purple
+                    loading={loading}
                 />
                 <StatCard
-                    title="Novos Cadastros"
-                    value="432"
-                    change="+5%"
-                    icon={TrendingUp}
+                    title="Verificações Pendentes"
+                    value={stats.pendingVerifications}
+                    icon={ShieldCheck}
                     color="245, 158, 11" // Gold
+                    loading={loading}
                 />
                 <StatCard
-                    title="Usuários Ativos"
-                    value="8,100"
-                    change="+18%"
-                    icon={Activity}
-                    color="59, 130, 246" // Blue
+                    title="Denúncias Pendentes"
+                    value={stats.pendingReports}
+                    icon={AlertTriangle}
+                    color="239, 68, 68" // Red
+                    loading={loading}
                 />
                 <StatCard
-                    title="Receita Mensal"
-                    value="R$ 45.2k"
-                    change="+8%"
-                    icon={DollarSign}
+                    title="Total Verificados"
+                    value={stats.verifiedUsers}
+                    icon={CheckCircle}
                     color="16, 185, 129" // Green
+                    loading={loading}
                 />
             </div>
 
             <div className="glass-panel" style={{ padding: '2rem', minHeight: '400px' }}>
                 <h3 style={{ marginBottom: '1.5rem' }}>Atividade Recente</h3>
                 <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '100px' }}>
-                    Gráfico de atividade será implementado aqui.
+                    Em breve: Gráfico de novos usuários e resoluções de denúncias.
                 </p>
             </div>
         </div>
