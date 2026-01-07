@@ -15,7 +15,7 @@ const VerificationList = () => {
         // Fetch requests and join with profiles to get user name
         const { data, error } = await supabase
             .from('verification_requests')
-            .select('*, profiles(name)')
+            .select('*, profiles(name, photos, age, bio)')
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
 
@@ -27,7 +27,7 @@ const VerificationList = () => {
         setLoading(false);
     };
 
-    const handleAction = async (id, status) => {
+    const handleAction = async (id, status, userId) => {
         const { error } = await supabase
             .from('verification_requests')
             .update({ status, reviewed_at: new Date().toISOString() })
@@ -36,6 +36,18 @@ const VerificationList = () => {
         if (error) {
             alert('Erro ao atualizar status');
         } else {
+            // If approved, update user profile
+            if (status === 'verified' && userId) {
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .update({ is_verified: true })
+                    .eq('id', userId);
+
+                if (profileError) {
+                    console.error('Error updating profile verification status:', profileError);
+                    alert('Erro ao atualizar status do perfil, mas a solicitação foi marcada como verificada.');
+                }
+            }
             fetchRequests(); // Refresh list
         }
     };
@@ -76,16 +88,33 @@ const VerificationList = () => {
                                 <strong>Gesto solicitado:</strong> {request.gesture_type || 'Não especificado'}
                             </div>
 
+                            {/* Profile Photos & Info */}
+                            <div style={{ marginTop: '0.5rem' }}>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                                    Idade: {request.profiles?.age || 'N/A'} • Bio: {request.profiles?.bio ? (request.profiles.bio.length > 20 ? request.profiles.bio.substring(0, 20) + '...' : request.profiles.bio) : '---'}
+                                </p>
+                                <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                                    {request.profiles?.photos && Array.isArray(request.profiles.photos) && request.profiles.photos.map((photo, idx) => (
+                                        <div key={idx} style={{ width: '60px', height: '60px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                                            <img src={photo} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        </div>
+                                    ))}
+                                    {(!request.profiles?.photos || request.profiles.photos.length === 0) && (
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Sem fotos de perfil</span>
+                                    )}
+                                </div>
+                            </div>
+
                             <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto' }}>
                                 <button
-                                    onClick={() => handleAction(request.id, 'verified')}
+                                    onClick={() => handleAction(request.id, 'verified', request.user_id)}
                                     className="btn-primary"
                                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#10b981' }}
                                 >
                                     <Check size={18} /> Aprovar
                                 </button>
                                 <button
-                                    onClick={() => handleAction(request.id, 'rejected')}
+                                    onClick={() => handleAction(request.id, 'rejected', request.user_id)}
                                     className="btn-primary"
                                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#ef4444' }}
                                 >
