@@ -1,7 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Users, ShieldCheck, AlertTriangle, CheckCircle } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+
+const COLORS = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b']; // Blue (Male), Pink (Female), Green, Yellow
 
 const StatCard = ({ title, value, icon: Icon, color, loading, headerAction }) => (
     <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -36,15 +38,17 @@ const Dashboard = () => {
         verifiedUsers: 0,
         newUsers: 0
     });
+    const [chartData, setChartData] = useState({ growth: [], gender: [] });
     const [loading, setLoading] = useState(true);
     const [newUserFilter, setNewUserFilter] = useState('today'); // 'today', 'week', 'month'
 
     useEffect(() => {
         fetchStats();
+        fetchChartData();
 
         // Subscribe to changes (optional, but good for realtime feel)
         const channels = [
-            supabase.channel('public:profiles').on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchStats()).subscribe(),
+            supabase.channel('public:profiles').on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => { fetchStats(); fetchChartData(); }).subscribe(),
             supabase.channel('public:verification_requests').on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, () => fetchStats()).subscribe(),
             supabase.channel('public:reports').on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => fetchStats()).subscribe()
         ];
@@ -53,6 +57,67 @@ const Dashboard = () => {
             channels.forEach(channel => supabase.removeChannel(channel));
         };
     }, [newUserFilter]); // Refetch when filter changes
+
+    const fetchChartData = async () => {
+        try {
+            // 1. User Growth (Last 7 Days)
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - 6); // Last 7 days
+
+            const { data: usersData, error: usersError } = await supabase
+                .from('profiles')
+                .select('created_at')
+                .gte('created_at', startDate.toISOString())
+                .order('created_at', { ascending: true });
+
+            if (!usersError && usersData) {
+                const growthMap = {};
+                // Initialize map with empty counts for last 7 days
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                    growthMap[dateStr] = 0;
+                }
+
+                usersData.forEach(user => {
+                    const dateStr = new Date(user.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                    if (growthMap[dateStr] !== undefined) {
+                        growthMap[dateStr]++;
+                    }
+                });
+
+                const growthArray = Object.keys(growthMap).map(date => ({
+                    date,
+                    users: growthMap[date]
+                }));
+
+                setChartData(prev => ({ ...prev, growth: growthArray }));
+            }
+
+            // 2. Gender Distribution
+            const { data: genderData, error: genderError } = await supabase
+                .from('profiles')
+                .select('gender');
+
+            if (!genderError && genderData) {
+                const genderMap = usersData ? genderData.reduce((acc, curr) => {
+                    const gender = curr.gender || 'Não informado';
+                    acc[gender] = (acc[gender] || 0) + 1;
+                    return acc;
+                }, {}) : {};
+
+                const genderArray = Object.keys(genderMap).map(name => ({
+                    name: name === 'male' ? 'Homens' : name === 'female' ? 'Mulheres' : name,
+                    value: genderMap[name]
+                }));
+
+                setChartData(prev => ({ ...prev, gender: genderArray }));
+            }
+
+        } catch (error) {
+            console.error("Error fetching chart data:", error);
+        }
+    };
 
     const fetchStats = async () => {
         setLoading(true);
@@ -166,11 +231,86 @@ const Dashboard = () => {
                 />
             </div>
 
-            <div className="glass-panel" style={{ padding: '2rem', minHeight: '400px' }}>
-                <h3 style={{ marginBottom: '1.5rem' }}>Atividade Recente</h3>
-                <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '100px' }}>
-                    Em breve: Gráfico de novos usuários e resoluções de denúncias.
-                </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+
+                {/* User Growth Chart */}
+                <div className="glass-panel" style={{ padding: '2rem', height: '400px', display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Users size={20} color="#a855f7" />
+                        Crescimento de Usuários (Últimos 7 dias)
+                    </h3>
+                    <div style={{ flex: 1, width: '100%', minHeight: 0 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={chartData.growth} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <XAxis
+                                    dataKey="date"
+                                    stroke="var(--text-muted)"
+                                    fontSize={12}
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                                <YAxis
+                                    stroke="var(--text-muted)"
+                                    fontSize={12}
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--glass-border)', borderRadius: '8px' }}
+                                    itemStyle={{ color: 'var(--text-primary)' }}
+                                />
+                                <Area type="monotone" dataKey="users" stroke="#a855f7" strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Gender Distribution Pie Chart */}
+                <div className="glass-panel" style={{ padding: '2rem', height: '400px', display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Users size={20} color="#3b82f6" />
+                        Distribuição por Gênero
+                    </h3>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={chartData.gender}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {chartData.gender.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0.1)" />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--glass-border)', borderRadius: '8px' }}
+                                    itemStyle={{ color: 'var(--text-primary)' }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        {/* Legend Overlay */}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                            {chartData.gender.map((entry, index) => (
+                                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: COLORS[index % COLORS.length] }}></div>
+                                    <span>{entry.name} ({entry.value})</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     );
