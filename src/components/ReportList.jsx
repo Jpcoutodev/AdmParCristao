@@ -20,7 +20,7 @@ const ReportList = ({ onReportsSeen }) => {
             .select(`
         *,
         reporter:reporter_id(name),
-        reported:reported_id(name, id, photos, age, bio)
+        reported:reported_id(name, id, image_urls, age, bio)
       `)
             .order('created_at', { ascending: false });
 
@@ -70,8 +70,8 @@ const ReportList = ({ onReportsSeen }) => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#333', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 'bold' }}>
-                                    {selectedUser.photos && selectedUser.photos.length > 0 ? (
-                                        <img src={selectedUser.photos[0]} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    {selectedUser.image_urls && selectedUser.image_urls.length > 0 ? (
+                                        <img src={selectedUser.image_urls[0]} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
                                         selectedUser.name?.charAt(0) || '?'
                                     )}
@@ -90,12 +90,12 @@ const ReportList = ({ onReportsSeen }) => {
                             <div>
                                 <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Fotos</h4>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.5rem' }}>
-                                    {selectedUser.photos && selectedUser.photos.map((photo, i) => (
+                                    {selectedUser.image_urls && selectedUser.image_urls.map((photo, i) => (
                                         <div key={i} style={{ aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
                                             <img src={photo} alt={`Foto ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} onClick={() => window.open(photo, '_blank')} />
                                         </div>
                                     ))}
-                                    {(!selectedUser.photos || selectedUser.photos.length === 0) && (
+                                    {(!selectedUser.image_urls || selectedUser.image_urls.length === 0) && (
                                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Nenhuma foto disponível.</p>
                                     )}
                                 </div>

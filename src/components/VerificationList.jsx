@@ -15,7 +15,7 @@ const VerificationList = () => {
         // Fetch requests and join with profiles to get user name
         const { data, error } = await supabase
             .from('verification_requests')
-            .select('*, profiles(name, photos, age, bio)')
+            .select('*, profiles(name, image_urls, age, bio)')
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
 
@@ -94,12 +94,12 @@ const VerificationList = () => {
                                     Idade: {request.profiles?.age || 'N/A'} • Bio: {request.profiles?.bio ? (request.profiles.bio.length > 20 ? request.profiles.bio.substring(0, 20) + '...' : request.profiles.bio) : '---'}
                                 </p>
                                 <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                                    {request.profiles?.photos && Array.isArray(request.profiles.photos) && request.profiles.photos.map((photo, idx) => (
+                                    {request.profiles?.image_urls && Array.isArray(request.profiles.image_urls) && request.profiles.image_urls.map((photo, idx) => (
                                         <div key={idx} style={{ width: '60px', height: '60px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
                                             <img src={photo} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         </div>
                                     ))}
-                                    {(!request.profiles?.photos || request.profiles.photos.length === 0) && (
+                                    {(!request.profiles?.image_urls || request.profiles.image_urls.length === 0) && (
                                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Sem fotos de perfil</span>
                                     )}
                                 </div>
