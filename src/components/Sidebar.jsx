@@ -1,7 +1,6 @@
-import React from 'react';
-import { LayoutDashboard, ShieldCheck, AlertTriangle, X } from 'lucide-react';
+import { LayoutDashboard, ShieldCheck, AlertTriangle, X, LogOut } from 'lucide-react';
 
-const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadCount }) => {
+const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadCount, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'verification', label: 'Verificação', icon: ShieldCheck },
