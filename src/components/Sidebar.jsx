@@ -1,10 +1,10 @@
 import { LayoutDashboard, ShieldCheck, AlertTriangle, X, LogOut } from 'lucide-react';
 
-const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadCount, onLogout }) => {
+const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadReports, unreadVerifications, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'verification', label: 'Verificação', icon: ShieldCheck },
-    { id: 'reports', label: 'Denúncias', icon: AlertTriangle, showBadge: true },
+    { id: 'verification', label: 'Verificação', icon: ShieldCheck, badgeCount: unreadVerifications },
+    { id: 'reports', label: 'Denúncias', icon: AlertTriangle, badgeCount: unreadReports },
   ];
 
   return (
@@ -77,7 +77,7 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadCount, onLogo
               <Icon size={20} />
               <span style={{ flex: 1 }}>{item.label}</span>
 
-              {item.showBadge && unreadCount > 0 && (
+              {item.badgeCount > 0 && (
                 <span style={{
                   background: '#ef4444',
                   color: 'white',
@@ -88,7 +88,7 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadCount, onLogo
                   minWidth: '18px',
                   textAlign: 'center'
                 }}>
-                  {unreadCount}
+                  {item.badgeCount}
                 </span>
               )}
             </button>

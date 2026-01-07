@@ -12,6 +12,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [unreadReportsCount, setUnreadReportsCount] = useState(0);
+  const [unreadVerificationsCount, setUnreadVerificationsCount] = useState(0);
 
   useEffect(() => {
     // Check active session
@@ -29,26 +30,36 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Initial fetch for pending reports count (only if logged in)
+  // Initial fetch for pending counts (only if logged in)
   useEffect(() => {
     if (!session) return;
 
-    fetchUnreadCount();
+    fetchUnreadReportsCount();
+    fetchUnreadVerificationsCount();
 
     // Subscribe to changes in reports table
-    const subscription = supabase
+    const reportsSubscription = supabase
       .channel('reports_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
-        fetchUnreadCount();
+        fetchUnreadReportsCount();
+      })
+      .subscribe();
+
+    // Subscribe to changes in verification_requests table
+    const verificationsSubscription = supabase
+      .channel('verification_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, () => {
+        fetchUnreadVerificationsCount();
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(subscription);
+      supabase.removeChannel(reportsSubscription);
+      supabase.removeChannel(verificationsSubscription);
     };
   }, [session]);
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadReportsCount = async () => {
     const { count, error } = await supabase
       .from('reports')
       .select('*', { count: 'exact', head: true })
@@ -59,8 +70,23 @@ function App() {
     }
   };
 
+  const fetchUnreadVerificationsCount = async () => {
+    const { count, error } = await supabase
+      .from('verification_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending');
+
+    if (!error) {
+      setUnreadVerificationsCount(count);
+    }
+  };
+
   const handleReportsSeen = () => {
     setUnreadReportsCount(0);
+  };
+
+  const handleVerificationsSeen = () => {
+    setUnreadVerificationsCount(0);
   };
 
   const handleLogout = async () => {
@@ -84,7 +110,8 @@ function App() {
         setActiveTab={setActiveTab}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        unreadCount={unreadReportsCount}
+        unreadReports={unreadReportsCount}
+        unreadVerifications={unreadVerificationsCount}
         onLogout={handleLogout}
       />
 
@@ -120,7 +147,7 @@ function App() {
         {/* Content Area */}
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           {activeTab === 'dashboard' && <Dashboard />}
-          {activeTab === 'verification' && <VerificationList />}
+          {activeTab === 'verification' && <VerificationList onVerificationsSeen={handleVerificationsSeen} />}
           {activeTab === 'reports' && <ReportList onReportsSeen={handleReportsSeen} />}
         </div>
       </main>

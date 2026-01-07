@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Check, X, ExternalLink, Maximize2, Eye } from 'lucide-react';
 
-const VerificationList = () => {
+const VerificationList = ({ onVerificationsSeen }) => {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedRequest, setSelectedRequest] = useState(null);
 
     useEffect(() => {
         fetchRequests();
+        if (onVerificationsSeen) onVerificationsSeen();
     }, []);
 
     const fetchRequests = async () => {
