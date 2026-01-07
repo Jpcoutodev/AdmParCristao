@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertCircle, Trash2, ShieldOff, CheckCircle } from 'lucide-react';
+import { AlertCircle, Trash2, ShieldOff, CheckCircle, Eye, X } from 'lucide-react';
 
 const ReportList = ({ onReportsSeen }) => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState('all');
+    const [selectedUser, setSelectedUser] = useState(null);
 
     useEffect(() => {
         fetchReports();
@@ -19,7 +20,7 @@ const ReportList = ({ onReportsSeen }) => {
             .select(`
         *,
         reporter:reporter_id(name),
-        reported:reported_id(name, id)
+        reported:reported_id(name, id, photos, age, bio)
       `)
             .order('created_at', { ascending: false });
 
@@ -54,6 +55,56 @@ const ReportList = ({ onReportsSeen }) => {
 
     return (
         <div style={{ padding: '2rem', flex: 1, overflowY: 'auto' }}>
+            {selectedUser && (
+                <div className="sidebar-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setSelectedUser(null)}>
+                    <div className="glass-panel" style={{ width: '90%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', background: 'var(--bg-secondary)', position: 'relative' }} onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => setSelectedUser(null)}
+                            style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Perfil Denunciado</h2>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#333', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 'bold' }}>
+                                    {selectedUser.photos && selectedUser.photos.length > 0 ? (
+                                        <img src={selectedUser.photos[0]} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        selectedUser.name?.charAt(0) || '?'
+                                    )}
+                                </div>
+                                <div>
+                                    <h3 style={{ fontSize: '1.25rem' }}>{selectedUser.name}</h3>
+                                    <p style={{ color: 'var(--text-muted)' }}>Idade: {selectedUser.age || 'N/A'}</p>
+                                </div>
+                            </div>
+
+                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px' }}>
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Bio</h4>
+                                <p style={{ lineHeight: '1.5' }}>{selectedUser.bio || 'Sem biografia.'}</p>
+                            </div>
+
+                            <div>
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Fotos</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.5rem' }}>
+                                    {selectedUser.photos && selectedUser.photos.map((photo, i) => (
+                                        <div key={i} style={{ aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                                            <img src={photo} alt={`Foto ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} onClick={() => window.open(photo, '_blank')} />
+                                        </div>
+                                    ))}
+                                    {(!selectedUser.photos || selectedUser.photos.length === 0) && (
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Nenhuma foto disponível.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                     <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Denúncias</h1>
@@ -123,6 +174,13 @@ const ReportList = ({ onReportsSeen }) => {
                                 </td>
                                 <td style={{ padding: '1.25rem' }}>
                                     <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                        <button
+                                            onClick={() => setSelectedUser(report.reported)}
+                                            style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
+                                            title="Ver Perfil"
+                                        >
+                                            <Eye size={20} />
+                                        </button>
                                         {report.status === 'pending' && (
                                             <button
                                                 onClick={() => handleStatusUpdate(report.id, 'resolved')}
