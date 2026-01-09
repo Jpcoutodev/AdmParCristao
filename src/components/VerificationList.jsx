@@ -28,7 +28,45 @@ const VerificationList = ({ onVerificationsSeen }) => {
         setLoading(false);
     };
 
-    const handleAction = async (id, status, userId) => {
+    // Função para extrair o bucket e path de uma URL do Supabase Storage
+    const extractStoragePath = (url) => {
+        try {
+            // URL format: https://xxx.supabase.co/storage/v1/object/public/bucket-name/path/to/file.jpg
+            const urlObj = new URL(url);
+            const pathParts = urlObj.pathname.split('/storage/v1/object/public/');
+            if (pathParts.length > 1) {
+                const fullPath = pathParts[1]; // bucket-name/path/to/file.jpg
+                const slashIndex = fullPath.indexOf('/');
+                if (slashIndex > -1) {
+                    const bucket = fullPath.substring(0, slashIndex);
+                    const filePath = fullPath.substring(slashIndex + 1);
+                    return { bucket, filePath };
+                }
+            }
+            return null;
+        } catch (e) {
+            console.error('Error parsing selfie URL:', e);
+            return null;
+        }
+    };
+
+    // Função para deletar a selfie do Storage
+    const deleteSelfieFromStorage = async (selfieUrl) => {
+        const pathInfo = extractStoragePath(selfieUrl);
+        if (pathInfo) {
+            const { error } = await supabase.storage
+                .from(pathInfo.bucket)
+                .remove([pathInfo.filePath]);
+
+            if (error) {
+                console.error('Error deleting selfie from storage:', error);
+            } else {
+                console.log('Selfie deleted successfully from storage');
+            }
+        }
+    };
+
+    const handleAction = async (id, status, userId, selfieUrl) => {
         const { error } = await supabase
             .from('verification_requests')
             .update({ status, reviewed_at: new Date().toISOString() })
@@ -37,6 +75,11 @@ const VerificationList = ({ onVerificationsSeen }) => {
         if (error) {
             alert('Erro ao atualizar status');
         } else {
+            // Deletar a selfie do Storage independente de aprovação ou recusa
+            if (selfieUrl) {
+                await deleteSelfieFromStorage(selfieUrl);
+            }
+
             if (status === 'verified' && userId) {
                 const { error: profileError } = await supabase
                     .from('profiles')
@@ -111,14 +154,14 @@ const VerificationList = ({ onVerificationsSeen }) => {
 
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
                             <button
-                                onClick={() => handleAction(selectedRequest.id, 'verified', selectedRequest.user_id)}
+                                onClick={() => handleAction(selectedRequest.id, 'verified', selectedRequest.user_id, selectedRequest.selfie_url)}
                                 className="btn-primary"
                                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#10b981', padding: '1rem' }}
                             >
                                 <Check size={20} /> Aprovar Verificação
                             </button>
                             <button
-                                onClick={() => handleAction(selectedRequest.id, 'rejected', selectedRequest.user_id)}
+                                onClick={() => handleAction(selectedRequest.id, 'rejected', selectedRequest.user_id, selectedRequest.selfie_url)}
                                 className="btn-primary"
                                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#ef4444', padding: '1rem' }}
                             >
