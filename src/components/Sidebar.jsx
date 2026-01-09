@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShieldCheck, AlertTriangle, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, ShieldCheck, AlertTriangle, X, LogOut, Crown } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadReports, unreadVerifications, onLogout }) => {
   const menuItems = [
@@ -98,12 +98,21 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadReports, unre
 
       <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#333', overflow: 'hidden' }}>
-            <img src="https://ui-avatars.com/api/?name=Admin+User&background=random" alt="Admin" />
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'var(--accent-gradient)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(168, 85, 247, 0.3)'
+          }}>
+            <Crown size={20} color="white" />
           </div>
           <div>
             <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>Administrador</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>admin@parcristao.com</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>adm@parcristao.app</p>
           </div>
         </div>
       </div>
