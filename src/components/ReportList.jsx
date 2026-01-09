@@ -51,6 +51,43 @@ const ReportList = ({ onReportsSeen }) => {
         }
     };
 
+    const handleBanUser = async (reportId, userId) => {
+        if (!userId) {
+            alert('Erro: ID do usuário não encontrado');
+            return;
+        }
+
+        const confirmBan = window.confirm('Tem certeza que deseja BANIR este usuário? Esta ação não pode ser desfeita.');
+        if (!confirmBan) return;
+
+        // 1. Marca o usuário como banido
+        const { error: banError } = await supabase
+            .from('profiles')
+            .update({ is_banned: true })
+            .eq('id', userId);
+
+        if (banError) {
+            console.error('Error banning user:', banError);
+            alert('Erro ao banir usuário');
+            return;
+        }
+
+        // 2. Marca a denúncia como resolvida
+        const { error: reportError } = await supabase
+            .from('reports')
+            .update({ status: 'resolved', reviewed_at: new Date().toISOString() })
+            .eq('id', reportId);
+
+        if (reportError) {
+            console.error('Error updating report:', reportError);
+            alert('Usuário banido, mas houve erro ao atualizar a denúncia.');
+        } else {
+            alert('Usuário banido com sucesso!');
+        }
+
+        fetchReports();
+    };
+
     if (loading) return <div className="flex-center" style={{ height: '100px' }}>Carregando...</div>;
 
     return (
@@ -191,6 +228,7 @@ const ReportList = ({ onReportsSeen }) => {
                                             </button>
                                         )}
                                         <button
+                                            onClick={() => handleBanUser(report.id, report.reported?.id)}
                                             style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
                                             title="Banir Usuário"
                                         >
