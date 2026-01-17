@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import VerificationList from './components/VerificationList';
 import ReportList from './components/ReportList';
 import FunnelView from './components/FunnelView';
+import EngagementView from './components/EngagementView';
 import Login from './components/Login';
 
 function App() {
@@ -149,6 +150,7 @@ function App() {
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'funnel' && <FunnelView />}
+          {activeTab === 'engagement' && <EngagementView />}
           {activeTab === 'verification' && <VerificationList onVerificationsSeen={handleVerificationsSeen} />}
           {activeTab === 'reports' && <ReportList onReportsSeen={handleReportsSeen} />}
         </div>
