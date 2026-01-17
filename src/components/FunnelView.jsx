@@ -33,10 +33,17 @@ const FunnelView = () => {
     const [dateFilter, setDateFilter] = useState('all');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [appliedStartDate, setAppliedStartDate] = useState('');
+    const [appliedEndDate, setAppliedEndDate] = useState('');
 
     useEffect(() => {
         fetchFunnelData();
-    }, [dateFilter, startDate, endDate]);
+    }, [dateFilter, appliedStartDate, appliedEndDate]);
+
+    const applyCustomDates = () => {
+        setAppliedStartDate(startDate);
+        setAppliedEndDate(endDate);
+    };
 
     const getDateRange = () => {
         const now = new Date();
@@ -57,9 +64,9 @@ const FunnelView = () => {
                 start.setDate(start.getDate() - 30);
                 break;
             case 'custom':
-                if (startDate) start = new Date(startDate);
-                if (endDate) {
-                    end = new Date(endDate);
+                if (appliedStartDate) start = new Date(appliedStartDate);
+                if (appliedEndDate) {
+                    end = new Date(appliedEndDate);
                     end.setDate(end.getDate() + 1); // Include end date
                 }
                 break;
@@ -300,7 +307,6 @@ const FunnelView = () => {
                             className="date-input"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            placeholder="Início"
                         />
                         <span style={{ color: 'var(--text-muted)' }}>até</span>
                         <input
@@ -308,9 +314,16 @@ const FunnelView = () => {
                             className="date-input"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            placeholder="Fim"
                         />
+                        <button
+                            className="date-filter-btn"
+                            onClick={applyCustomDates}
+                            style={{ background: 'rgba(16, 185, 129, 0.2)', borderColor: '#10b981', color: '#10b981' }}
+                        >
+                            Aplicar
+                        </button>
                     </>
+
                 )}
             </div>
 
