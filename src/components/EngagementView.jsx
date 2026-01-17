@@ -16,9 +16,14 @@ const EngagementView = () => {
         totalMatches: 0,
         totalMessages: 0,
         matchRate: 0,
-        messagesPerMatch: 0
+        totalMatches: 0,
+        totalMessages: 0,
+        matchRate: 0,
+        messagesPerMatch: 0,
+        avgRetentionD1: 0
     });
     const [dailyData, setDailyData] = useState([]);
+    const [retentionData, setRetentionData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [dateFilter, setDateFilter] = useState('30d');
 
@@ -112,6 +117,19 @@ const EngagementView = () => {
             }
 
             setDailyData(Object.values(dailyStats));
+
+            // Fetch retention data
+            const { data: retentionRes, error: retentionError } = await supabase.rpc('get_user_retention');
+            if (retentionRes && !retentionError) {
+                setRetentionData(retentionRes);
+
+                // Calculate average D1 retention
+                const totalReturned = retentionRes.reduce((acc, curr) => acc + curr.returned_users, 0);
+                const totalSignups = retentionRes.reduce((acc, curr) => acc + curr.total_signups, 0);
+                const avgRetention = totalSignups > 0 ? ((totalReturned / totalSignups) * 100).toFixed(1) : 0;
+
+                setStats(prev => ({ ...prev, avgRetentionD1: avgRetention }));
+            }
 
         } catch (error) {
             console.error('Error fetching engagement:', error);
@@ -256,6 +274,14 @@ const EngagementView = () => {
                     </div>
                     <h3 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0 0', color: '#a855f7' }}>{stats.messagesPerMatch}</h3>
                 </div>
+
+                <div className="glass-panel engagement-stat-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <TrendingUp size={18} color="#ef4444" />
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Retenção D1</span>
+                    </div>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0 0', color: '#ef4444' }}>{stats.avgRetentionD1}%</h3>
+                </div>
             </div>
 
             {/* Activity Chart */}
@@ -319,6 +345,9 @@ const EngagementView = () => {
                     </p>
                     <p style={{ margin: 0 }}>
                         <strong style={{ color: '#a855f7' }}>Msg/Match:</strong> Média de 10+ mensagens indica conversas saudáveis.
+                    </p>
+                    <p style={{ margin: '0.5rem 0 0' }}>
+                        <strong style={{ color: '#ef4444' }}>Retenção D1:</strong> % de usuários que voltam 24h depois. Acima de 20% é bom.
                     </p>
                 </div>
             </div>
