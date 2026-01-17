@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Users, TrendingUp, AlertCircle, CheckCircle, ChevronDown } from 'lucide-react';
+import { Users, TrendingUp, AlertCircle, CheckCircle, ChevronDown, Calendar } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const STEP_NAMES = [
@@ -14,6 +14,14 @@ const STEP_NAMES = [
     { step: 7, name: 'Photos', desc: 'Fotos' },
 ];
 
+const DATE_FILTERS = [
+    { key: '1d', label: '1 Dia' },
+    { key: '7d', label: '7 Dias' },
+    { key: '30d', label: '30 Dias' },
+    { key: 'all', label: 'Todo Período' },
+    { key: 'custom', label: 'Personalizado' },
+];
+
 const FunnelView = () => {
     const [funnelData, setFunnelData] = useState([]);
     const [abandonments, setAbandonments] = useState([]);
@@ -21,16 +29,65 @@ const FunnelView = () => {
     const [loading, setLoading] = useState(true);
     const [showAbandonments, setShowAbandonments] = useState(false);
 
+    // Date filter states
+    const [dateFilter, setDateFilter] = useState('all');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
     useEffect(() => {
         fetchFunnelData();
-    }, []);
+    }, [dateFilter, startDate, endDate]);
+
+    const getDateRange = () => {
+        const now = new Date();
+        let start = null;
+        let end = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Tomorrow to include today
+
+        switch (dateFilter) {
+            case '1d':
+                start = new Date(now);
+                start.setDate(start.getDate() - 1);
+                break;
+            case '7d':
+                start = new Date(now);
+                start.setDate(start.getDate() - 7);
+                break;
+            case '30d':
+                start = new Date(now);
+                start.setDate(start.getDate() - 30);
+                break;
+            case 'custom':
+                if (startDate) start = new Date(startDate);
+                if (endDate) {
+                    end = new Date(endDate);
+                    end.setDate(end.getDate() + 1); // Include end date
+                }
+                break;
+            case 'all':
+            default:
+                return { start: null, end: null };
+        }
+
+        return { start, end };
+    };
 
     const fetchFunnelData = async () => {
         setLoading(true);
         try {
-            const { data: allData, error: allError } = await supabase
+            const { start, end } = getDateRange();
+
+            let query = supabase
                 .from('onboarding_progress')
-                .select('current_step, completed_at');
+                .select('current_step, completed_at, started_at');
+
+            if (start) {
+                query = query.gte('started_at', start.toISOString());
+            }
+            if (end) {
+                query = query.lt('started_at', end.toISOString());
+            }
+
+            const { data: allData, error: allError } = await query;
 
             if (allError) {
                 console.error('Error fetching funnel data:', allError);
@@ -63,7 +120,6 @@ const FunnelView = () => {
                         dropCount: dropCount,
                         dropRate: dropRate
                     };
-
                 });
 
                 setFunnelData(chartData);
@@ -74,16 +130,26 @@ const FunnelView = () => {
                     rate: totalInvolved > 0 ? ((completedCount / totalInvolved) * 100).toFixed(1) : 0
                 });
             } else {
-                setFunnelData(STEP_NAMES.map(s => ({ ...s, count: 0, dropRate: '0' })));
+                setFunnelData(STEP_NAMES.map(s => ({ ...s, count: 0, dropCount: 0, dropRate: '0' })));
                 setCompletionRate({ completed: 0, abandoned: 0, total: 0, rate: 0 });
             }
 
-            const { data: abandonData, error: abandonError } = await supabase
+            // Abandonment details with same date filter
+            let abandonQuery = supabase
                 .from('onboarding_progress')
                 .select('user_id, current_step, step_name, started_at')
                 .is('completed_at', null)
                 .order('started_at', { ascending: false })
                 .limit(50);
+
+            if (start) {
+                abandonQuery = abandonQuery.gte('started_at', start.toISOString());
+            }
+            if (end) {
+                abandonQuery = abandonQuery.lt('started_at', end.toISOString());
+            }
+
+            const { data: abandonData, error: abandonError } = await abandonQuery;
 
             if (!abandonError && abandonData) {
                 setAbandonments(abandonData);
@@ -167,6 +233,43 @@ const FunnelView = () => {
                         padding: 0;
                     }
                 }
+                .date-filter-bar {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.5rem;
+                    margin-bottom: 1.5rem;
+                    align-items: center;
+                }
+                .date-filter-btn {
+                    padding: 0.5rem 1rem;
+                    border: 1px solid var(--glass-border);
+                    border-radius: 8px;
+                    background: transparent;
+                    color: var(--text-muted);
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    transition: all 0.2s;
+                }
+                .date-filter-btn:hover {
+                    background: rgba(255,255,255,0.05);
+                    color: var(--text-primary);
+                }
+                .date-filter-btn.active {
+                    background: rgba(139, 92, 246, 0.2);
+                    border-color: #a855f7;
+                    color: #a855f7;
+                }
+                .date-input {
+                    padding: 0.5rem;
+                    border: 1px solid var(--glass-border);
+                    border-radius: 8px;
+                    background: rgba(255,255,255,0.05);
+                    color: var(--text-primary);
+                    font-size: 0.8rem;
+                }
+                .date-input::-webkit-calendar-picker-indicator {
+                    filter: invert(1);
+                }
             `}</style>
 
             <div style={{ marginBottom: '1.5rem' }}>
@@ -176,6 +279,39 @@ const FunnelView = () => {
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
                     Análise de retenção por etapa
                 </p>
+            </div>
+
+            {/* Date Filter Bar */}
+            <div className="date-filter-bar">
+                <Calendar size={18} color="var(--text-muted)" />
+                {DATE_FILTERS.map(filter => (
+                    <button
+                        key={filter.key}
+                        className={`date-filter-btn ${dateFilter === filter.key ? 'active' : ''}`}
+                        onClick={() => setDateFilter(filter.key)}
+                    >
+                        {filter.label}
+                    </button>
+                ))}
+                {dateFilter === 'custom' && (
+                    <>
+                        <input
+                            type="date"
+                            className="date-input"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            placeholder="Início"
+                        />
+                        <span style={{ color: 'var(--text-muted)' }}>até</span>
+                        <input
+                            type="date"
+                            className="date-input"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            placeholder="Fim"
+                        />
+                    </>
+                )}
             </div>
 
             {/* Stats Cards */}
@@ -425,7 +561,7 @@ const FunnelView = () => {
                                 {abandonments.length === 0 && (
                                     <tr>
                                         <td colSpan="3" style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                            Nenhum abandono registrado.
+                                            Nenhum abandono registrado neste período.
                                         </td>
                                     </tr>
                                 )}
