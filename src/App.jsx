@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import VerificationList from './components/VerificationList';
 import ReportList from './components/ReportList';
+import FunnelView from './components/FunnelView';
 import Login from './components/Login';
 
 function App() {
@@ -147,6 +148,7 @@ function App() {
         {/* Content Area */}
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'funnel' && <FunnelView />}
           {activeTab === 'verification' && <VerificationList onVerificationsSeen={handleVerificationsSeen} />}
           {activeTab === 'reports' && <ReportList onReportsSeen={handleReportsSeen} />}
         </div>
