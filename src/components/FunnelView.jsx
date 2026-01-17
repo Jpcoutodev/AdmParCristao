@@ -298,6 +298,67 @@ const FunnelView = () => {
                 </div>
             </div>
 
+            {/* Drop-offs Chart */}
+            <div className="glass-panel" style={{ padding: '1rem', marginBottom: '1rem' }}>
+                <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', fontWeight: 600 }}>
+                    <AlertCircle size={18} color="#ef4444" />
+                    Paradas por Etapa
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                    Quantas pessoas pararam em cada etapa (não continuaram)
+                </p>
+
+                <div className="funnel-chart-container">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                            data={funnelData.filter(d => d.step > 0)}
+                            layout="vertical"
+                            margin={{ top: 5, right: 40, left: 70, bottom: 5 }}
+                            barSize={24}
+                        >
+                            <XAxis type="number" stroke="#64748b" fontSize={10} />
+                            <YAxis
+                                type="category"
+                                dataKey="name"
+                                stroke="#94a3b8"
+                                fontSize={11}
+                                width={65}
+                                axisLine={false}
+                                tickLine={false}
+                            />
+                            <Tooltip
+                                cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                                content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                        const data = payload[0].payload;
+                                        return (
+                                            <div style={{
+                                                backgroundColor: '#1e293b',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                padding: '0.5rem 0.75rem',
+                                                borderRadius: '6px',
+                                                fontSize: '0.8rem'
+                                            }}>
+                                                <p style={{ margin: 0, fontWeight: 600 }}>{data.name}</p>
+                                                <p style={{ margin: 0, color: '#ef4444' }}>{data.dropCount} pararam aqui</p>
+                                                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.75rem' }}>{data.dropRate}% de quem chegou</p>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                }}
+                            />
+                            <Bar
+                                dataKey="dropCount"
+                                radius={[0, 4, 4, 0]}
+                                label={{ position: 'right', fill: '#ef4444', fontSize: 10 }}
+                                fill="#ef4444"
+                            />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
             {/* Abandonment Details */}
             <div className="glass-panel" style={{ padding: '1rem' }}>
                 <button
