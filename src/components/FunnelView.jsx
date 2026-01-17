@@ -52,15 +52,18 @@ const FunnelView = () => {
                 const chartData = STEP_NAMES.map((s, idx) => {
                     const count = stepReaches[s.step];
                     const prevCount = idx > 0 ? stepReaches[s.step - 1] : totalInvolved;
-                    const dropRate = prevCount > 0 ? (((prevCount - count) / prevCount) * 100).toFixed(1) : 0;
+                    const dropCount = prevCount - count;
+                    const dropRate = prevCount > 0 ? ((dropCount / prevCount) * 100).toFixed(1) : 0;
 
                     return {
                         step: s.step,
                         name: s.name,
                         desc: s.desc,
                         count: count,
+                        dropCount: dropCount,
                         dropRate: dropRate
                     };
+
                 });
 
                 setFunnelData(chartData);
@@ -249,8 +252,12 @@ const FunnelView = () => {
                                                 fontSize: '0.8rem'
                                             }}>
                                                 <p style={{ margin: 0, fontWeight: 600 }}>{data.name}</p>
-                                                <p style={{ margin: 0, color: '#3b82f6' }}>{data.count} usuários</p>
-                                                {data.step > 0 && <p style={{ margin: 0, color: '#ef4444', fontSize: '0.75rem' }}>Drop: -{data.dropRate}%</p>}
+                                                <p style={{ margin: 0, color: '#3b82f6' }}>{data.count} alcançaram</p>
+                                                {data.step > 0 && data.dropCount > 0 && (
+                                                    <p style={{ margin: 0, color: '#ef4444', fontSize: '0.75rem' }}>
+                                                        {data.dropCount} pararam aqui ({data.dropRate}%)
+                                                    </p>
+                                                )}
                                             </div>
                                         );
                                     }
@@ -272,7 +279,7 @@ const FunnelView = () => {
                 </div>
 
                 <div className="funnel-legend">
-                    {STEP_NAMES.map((step) => (
+                    {funnelData.map((step, idx) => (
                         <div key={step.step} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem' }}>
                             <span style={{
                                 width: '16px', height: '16px', borderRadius: '3px',
@@ -283,6 +290,9 @@ const FunnelView = () => {
                                 {step.step}
                             </span>
                             <span style={{ color: 'var(--text-muted)' }}>{step.desc}</span>
+                            {step.dropCount > 0 && (
+                                <span style={{ color: '#ef4444', fontWeight: 600 }}>(-{step.dropCount})</span>
+                            )}
                         </div>
                     ))}
                 </div>
