@@ -106,10 +106,18 @@ const FunnelView = () => {
 
                 const stepReaches = new Array(8).fill(0);
 
+                // Calcular quantos estão parados em cada etapa (não completaram e current_step = etapa)
+                const stoppedAtStep = new Array(8).fill(0);
+
                 allData.forEach(row => {
                     const maxReached = row.completed_at ? 7 : row.current_step;
                     for (let i = 0; i <= maxReached; i++) {
                         stepReaches[i]++;
+                    }
+
+                    // Contar quem está parado em cada etapa (não completou)
+                    if (!row.completed_at) {
+                        stoppedAtStep[row.current_step]++;
                     }
                 });
 
@@ -118,6 +126,12 @@ const FunnelView = () => {
                     const prevCount = idx > 0 ? stepReaches[s.step - 1] : totalInvolved;
                     const dropCount = prevCount - count;
                     const dropRate = prevCount > 0 ? ((dropCount / prevCount) * 100).toFixed(1) : 0;
+                    const stoppedCount = stoppedAtStep[s.step];
+
+                    // Quem está no step X parou ANTES de completar o step X+1
+                    const nextStep = STEP_NAMES[idx + 1];
+                    const stoppedBeforeName = nextStep ? nextStep.name : 'Conclusão';
+                    const stoppedBeforeDesc = nextStep ? nextStep.desc : 'Finalizando';
 
                     return {
                         step: s.step,
@@ -125,7 +139,10 @@ const FunnelView = () => {
                         desc: s.desc,
                         count: count,
                         dropCount: dropCount,
-                        dropRate: dropRate
+                        dropRate: dropRate,
+                        stoppedCount: stoppedCount,
+                        stoppedBeforeName: stoppedBeforeName,
+                        stoppedBeforeDesc: stoppedBeforeDesc
                     };
                 });
 
@@ -451,16 +468,16 @@ const FunnelView = () => {
             <div className="glass-panel" style={{ padding: '1rem', marginBottom: '1rem' }}>
                 <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', fontWeight: 600 }}>
                     <AlertCircle size={18} color="#ef4444" />
-                    Paradas por Etapa
+                    Não Chegaram Até
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                    Quantas pessoas pararam em cada etapa (não continuaram)
+                    Quantas pessoas desistiram antes de chegar a cada etapa
                 </p>
 
                 <div className="funnel-chart-container">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart
-                            data={funnelData.filter(d => d.step > 0)}
+                            data={funnelData.filter(d => d.step < 7)}
                             layout="vertical"
                             margin={{ top: 5, right: 40, left: 70, bottom: 5 }}
                             barSize={24}
@@ -468,7 +485,7 @@ const FunnelView = () => {
                             <XAxis type="number" stroke="#64748b" fontSize={10} />
                             <YAxis
                                 type="category"
-                                dataKey="name"
+                                dataKey="stoppedBeforeName"
                                 stroke="#94a3b8"
                                 fontSize={11}
                                 width={65}
@@ -488,9 +505,9 @@ const FunnelView = () => {
                                                 borderRadius: '6px',
                                                 fontSize: '0.8rem'
                                             }}>
-                                                <p style={{ margin: 0, fontWeight: 600 }}>{data.name}</p>
-                                                <p style={{ margin: 0, color: '#ef4444' }}>{data.dropCount} pararam aqui</p>
-                                                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.75rem' }}>{data.dropRate}% de quem chegou</p>
+                                                <p style={{ margin: 0, fontWeight: 600 }}>{data.stoppedBeforeName}</p>
+                                                <p style={{ margin: 0, color: '#ef4444' }}>{data.stoppedCount} não chegaram até aqui</p>
+                                                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.75rem' }}>Desistiram em: {data.name} ({data.desc})</p>
                                             </div>
                                         );
                                     }
@@ -498,7 +515,7 @@ const FunnelView = () => {
                                 }}
                             />
                             <Bar
-                                dataKey="dropCount"
+                                dataKey="stoppedCount"
                                 radius={[0, 4, 4, 0]}
                                 label={{ position: 'right', fill: '#ef4444', fontSize: 10 }}
                                 fill="#ef4444"
