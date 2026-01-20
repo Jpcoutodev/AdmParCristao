@@ -76,9 +76,8 @@ const VerificationList = ({ onVerificationsSeen }) => {
             alert('Erro ao atualizar status');
         } else {
             // Deletar a selfie do Storage independente de aprovação ou recusa
-            if (selfieUrl) {
-                await deleteSelfieFromStorage(selfieUrl);
-            }
+            // Foto de verificação mantida conforme solicitação
+
 
             if (status === 'verified' && userId) {
                 const { error: profileError } = await supabase

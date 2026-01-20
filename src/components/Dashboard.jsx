@@ -48,8 +48,14 @@ const Dashboard = () => {
 
         // Subscribe to changes (optional, but good for realtime feel)
         const channels = [
-            supabase.channel('public:profiles').on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => { fetchStats(); fetchChartData(); }).subscribe(),
+            // Only update stats on profile creation/deletion, not every update
+            supabase.channel('public:profiles').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, () => fetchStats()).subscribe(),
+            supabase.channel('public:profiles_del').on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'profiles' }, () => fetchStats()).subscribe(),
+
+            // Verification requests: update stats on modifications
             supabase.channel('public:verification_requests').on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, () => fetchStats()).subscribe(),
+
+            // Reports: update stats on modifications
             supabase.channel('public:reports').on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => fetchStats()).subscribe()
         ];
 

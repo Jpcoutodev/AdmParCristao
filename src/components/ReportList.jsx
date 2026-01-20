@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertCircle, Trash2, ShieldOff, CheckCircle, Eye, X } from 'lucide-react';
+import { ShieldOff, CheckCircle, Eye, X } from 'lucide-react';
 
 const ReportList = ({ onReportsSeen }) => {
     const [reports, setReports] = useState([]);
