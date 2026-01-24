@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { ShieldOff, CheckCircle, Eye, X } from 'lucide-react';
+import { ShieldOff, CheckCircle, Eye, X, Trash2 } from 'lucide-react';
 
 const ReportList = ({ onReportsSeen }) => {
     const [reports, setReports] = useState([]);
@@ -85,6 +85,31 @@ const ReportList = ({ onReportsSeen }) => {
             alert('Usuário banido com sucesso!');
         }
 
+        fetchReports();
+    };
+
+    const handleDeleteUser = async (reportId, userId) => {
+        if (!userId) {
+            alert('Erro: ID do usuário não encontrado');
+            return;
+        }
+
+        const confirmDelete = window.confirm('Tem certeza que deseja EXCLUIR permanentemente este usuário? Esta ação não pode ser desfeita e removerá todos os dados do usuário, incluindo esta denúncia.');
+        if (!confirmDelete) return;
+
+        // 1. Deleta o perfil (Cascade cuidará de likes, matches, messages, reports etc)
+        const { error: deleteError } = await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', userId);
+
+        if (deleteError) {
+            console.error('Error deleting user:', deleteError);
+            alert('Erro ao excluir usuário: ' + deleteError.message);
+            return;
+        }
+
+        alert('Usuário excluído com sucesso!');
         fetchReports();
     };
 
@@ -233,6 +258,13 @@ const ReportList = ({ onReportsSeen }) => {
                                             title="Banir Usuário"
                                         >
                                             <ShieldOff size={20} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteUser(report.id, report.reported?.id)}
+                                            style={{ background: 'transparent', border: 'none', color: '#b91c1c', cursor: 'pointer' }}
+                                            title="Excluir Usuário"
+                                        >
+                                            <Trash2 size={20} />
                                         </button>
                                     </div>
                                 </td>

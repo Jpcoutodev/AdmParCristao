@@ -7,6 +7,8 @@ import VerificationList from './components/VerificationList';
 import ReportList from './components/ReportList';
 import FunnelView from './components/FunnelView';
 import EngagementView from './components/EngagementView';
+import DeletionFeedbackList from './components/DeletionFeedbackList';
+import BugList from './components/BugList';
 import Login from './components/Login';
 
 function App() {
@@ -153,6 +155,8 @@ function App() {
           {activeTab === 'engagement' && <EngagementView />}
           {activeTab === 'verification' && <VerificationList onVerificationsSeen={handleVerificationsSeen} />}
           {activeTab === 'reports' && <ReportList onReportsSeen={handleReportsSeen} />}
+          {activeTab === 'deletion_feedback' && <DeletionFeedbackList />}
+          {activeTab === 'bugs' && <BugList />}
         </div>
       </main>
     </div>
