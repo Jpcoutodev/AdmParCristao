@@ -9,6 +9,7 @@ import FunnelView from './components/FunnelView';
 import EngagementView from './components/EngagementView';
 import DeletionFeedbackList from './components/DeletionFeedbackList';
 import BugList from './components/BugList';
+import PublicoStats from './components/PublicoStats';
 import Login from './components/Login';
 
 function App() {
@@ -151,6 +152,7 @@ function App() {
         {/* Content Area */}
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'publico' && <PublicoStats />}
           {activeTab === 'funnel' && <FunnelView />}
           {activeTab === 'engagement' && <EngagementView />}
           {activeTab === 'verification' && <VerificationList onVerificationsSeen={handleVerificationsSeen} />}

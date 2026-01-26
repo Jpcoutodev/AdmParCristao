@@ -3,6 +3,7 @@ import { LayoutDashboard, ShieldCheck, AlertTriangle, X, LogOut, Crown, Trending
 const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadReports, unreadVerifications, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'publico', label: 'Público', icon: TrendingUp },
     { id: 'funnel', label: 'Funil', icon: TrendingUp },
     { id: 'engagement', label: 'Engajamento', icon: Heart },
     { id: 'verification', label: 'Verificação', icon: ShieldCheck, badgeCount: unreadVerifications },

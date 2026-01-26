@@ -5,7 +5,7 @@ import { CheckCircle, MessageSquare, Info, Calendar, UserX } from 'lucide-react'
 const DeletionFeedbackList = () => {
     const [feedbacks, setFeedbacks] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('pending');
 
     useEffect(() => {
         fetchFeedbacks();
@@ -32,6 +32,21 @@ const DeletionFeedbackList = () => {
         setLoading(false);
     };
 
+    const handleMarkAllAsReviewed = async () => {
+        if (!window.confirm('Tem certeza que deseja marcar TODOS os feedbacks pendentes como vistos?')) return;
+
+        const { error } = await supabase
+            .from('account_deletion_feedback')
+            .update({ status: 'reviewed' })
+            .eq('status', 'pending');
+
+        if (error) {
+            alert('Erro ao atualizar status');
+        } else {
+            fetchFeedbacks();
+        }
+    };
+
     const handleMarkAsReviewed = async (id) => {
         const { error } = await supabase
             .from('account_deletion_feedback')
@@ -55,27 +70,50 @@ const DeletionFeedbackList = () => {
                     <p style={{ color: 'var(--text-muted)' }}>Veja os motivos pelos quais os usuários estão excluindo suas contas.</p>
                 </div>
 
-                {/* Filters */}
-                <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.4rem', borderRadius: '10px', border: '1px solid var(--glass-border)' }}>
-                    {['all', 'pending', 'reviewed'].map((status) => (
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    {filterStatus === 'pending' && feedbacks.length > 0 && (
                         <button
-                            key={status}
-                            onClick={() => setFilterStatus(status)}
+                            onClick={handleMarkAllAsReviewed}
                             style={{
                                 padding: '0.5rem 1rem',
-                                border: 'none',
+                                border: '1px solid var(--glass-border)',
                                 borderRadius: '7px',
                                 cursor: 'pointer',
                                 fontSize: '0.85rem',
                                 fontWeight: 600,
-                                transition: 'all 0.2s',
-                                background: filterStatus === status ? 'var(--accent-primary)' : 'transparent',
-                                color: filterStatus === status ? 'white' : 'var(--text-secondary)',
+                                background: 'rgba(16, 185, 129, 0.1)',
+                                color: '#10b981',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
                             }}
                         >
-                            {status === 'all' ? 'Todos' : status === 'pending' ? 'Pendentes' : 'Vistos'}
+                            <CheckCircle size={16} />
+                            Marcar todos como vistos
                         </button>
-                    ))}
+                    )}
+
+                    <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.4rem', borderRadius: '10px', border: '1px solid var(--glass-border)' }}>
+                        {['all', 'pending', 'reviewed'].map((status) => (
+                            <button
+                                key={status}
+                                onClick={() => setFilterStatus(status)}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    border: 'none',
+                                    borderRadius: '7px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 600,
+                                    transition: 'all 0.2s',
+                                    background: filterStatus === status ? 'var(--accent-primary)' : 'transparent',
+                                    color: filterStatus === status ? 'white' : 'var(--text-secondary)',
+                                }}
+                            >
+                                {status === 'all' ? 'Todos' : status === 'pending' ? 'Pendentes' : 'Vistos'}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -106,6 +144,16 @@ const DeletionFeedbackList = () => {
                                 <td style={{ padding: '1.25rem' }}>
                                     <div style={{ fontWeight: 600 }}>{item.user_name || 'Sem nome'}</div>
                                     <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{item.user_email || 'Sem email'}</div>
+                                    {(item.user_age || item.user_city) && (
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                            <span>
+                                                {[
+                                                    item.user_age ? `${item.user_age} anos` : null,
+                                                    item.user_city
+                                                ].filter(Boolean).join(' • ')}
+                                            </span>
+                                        </div>
+                                    )}
                                 </td>
                                 <td style={{ padding: '1.25rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
