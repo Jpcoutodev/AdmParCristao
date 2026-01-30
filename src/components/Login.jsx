@@ -1,12 +1,31 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Lock, Mail, AlertCircle } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Chrome } from 'lucide-react';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    const checkAdminStatus = async (userId) => {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', userId)
+            .single();
+
+        if (error) {
+            console.error('Error checking admin status:', error);
+            throw new Error('Erro ao verificar permissões de administrador.');
+        }
+
+        if (!data?.is_admin) {
+            throw new Error('Acesso não autorizado. Este painel é restrito a administradores.');
+        }
+
+        return true;
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -21,17 +40,33 @@ const Login = () => {
 
             if (error) throw error;
 
-            // Security Check: Whitelist
-            if (data.user?.email !== 'coutodev7@gmail.com') {
-                await supabase.auth.signOut();
-                throw new Error('Acesso não autorizado. Este painel é restrito.');
+            if (data?.user) {
+               await checkAdminStatus(data.user.id);
             }
 
             // Success is handled by the onAuthStateChange listener in App.jsx
         } catch (error) {
             setError(error.message);
+            // Sign out if admin check failed but auth succeeded
+            if (error.message.includes('Acesso não autorizado')) {
+                await supabase.auth.signOut();
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin
+                }
+            });
+            if (error) throw error;
+        } catch (error) {
+            setError(error.message);
         }
     };
 
@@ -149,6 +184,35 @@ const Login = () => {
                         }}
                     >
                         {loading ? 'Entrando...' : 'Entrar no Painel'}
+                    </button>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', margin: '1rem 0' }}>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }}></div>
+                        <span style={{ padding: '0 0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>OU</span>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }}></div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleGoogleLogin}
+                        className="btn-secondary"
+                        style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.5rem',
+                            background: 'white',
+                            color: 'black',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: 500
+                        }}
+                    >
+                        <Chrome size={18} />
+                        Entrar com Google
                     </button>
                 </form>
             </div>

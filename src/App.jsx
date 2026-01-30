@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, LogOut } from 'lucide-react';
+import { Menu, LogOut, Loader2 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -18,22 +18,57 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [unreadReportsCount, setUnreadReportsCount] = useState(0);
   const [unreadVerificationsCount, setUnreadVerificationsCount] = useState(0);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
   useEffect(() => {
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+      checkSessionAndAdmin(session);
     });
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+      checkSessionAndAdmin(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkSessionAndAdmin = async (currentSession) => {
+    if (!currentSession) {
+      setSession(null);
+      setIsCheckingAdmin(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', currentSession.user.id)
+        .single();
+
+      if (error || !data?.is_admin) {
+        console.warn("User is not admin or error checking profile", error);
+        await supabase.auth.signOut();
+        setSession(null);
+        if (!error && !data?.is_admin) {
+          alert("Acesso restrito a administradores.");
+        }
+      } else {
+        setSession(currentSession);
+      }
+    } catch (err) {
+      console.error("Unexpected error checking admin:", err);
+      await supabase.auth.signOut();
+      setSession(null);
+    } finally {
+      setIsCheckingAdmin(false);
+    }
+  };
+
 
   // Initial fetch for pending counts (only if logged in)
   useEffect(() => {
@@ -96,7 +131,16 @@ function App() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    setSession(null);
   };
+
+  if (isCheckingAdmin) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+        <Loader2 className="animate-spin" size={32} />
+      </div>
+    );
+  }
 
   if (!session) {
     return <Login />;
