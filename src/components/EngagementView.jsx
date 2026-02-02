@@ -16,9 +16,6 @@ const EngagementView = () => {
         totalMatches: 0,
         totalMessages: 0,
         matchRate: 0,
-        totalMatches: 0,
-        totalMessages: 0,
-        matchRate: 0,
         messagesPerMatch: 0,
         avgRetentionD1: 0
     });
@@ -33,20 +30,21 @@ const EngagementView = () => {
 
     const getDateRange = () => {
         const now = new Date();
-        let start = null;
+        now.setHours(23, 59, 59, 999); // Set to end of day
+        let start = new Date(now);
 
         switch (dateFilter) {
             case '1d':
-                start = new Date(now);
-                start.setDate(start.getDate() - 1);
+                start.setDate(now.getDate() - 1);
+                start.setHours(0, 0, 0, 0);
                 break;
             case '7d':
-                start = new Date(now);
-                start.setDate(start.getDate() - 7);
+                start.setDate(now.getDate() - 7);
+                start.setHours(0, 0, 0, 0);
                 break;
             case '30d':
-                start = new Date(now);
-                start.setDate(start.getDate() - 30);
+                start.setDate(now.getDate() - 30);
+                start.setHours(0, 0, 0, 0);
                 break;
             case 'all':
             default:
@@ -61,62 +59,82 @@ const EngagementView = () => {
         try {
             const startDate = getDateRange();
 
-            // Fetch likes
+            // Fetch counts using count: 'estimated' or 'exact' and head: true to avoid downloading rows
+            // But we need the rows for the chart, so let's stick to select but handle the All Period case
+
+            // For the chart, we need data. If dateFilter is 'all', we might have more than 1000 rows.
+            // A better way would be an RPC that returns aggregated daily data.
+            // For now, let's optimize the existing fetching.
+
             let likesQuery = supabase.from('likes').select('created_at', { count: 'exact' });
             if (startDate) likesQuery = likesQuery.gte('created_at', startDate.toISOString());
-            const { count: likesCount, data: likesData } = await likesQuery;
+            const { count: likesCount, data: likesRows } = await likesQuery;
 
-            // Fetch matches
             let matchesQuery = supabase.from('matches').select('created_at', { count: 'exact' });
             if (startDate) matchesQuery = matchesQuery.gte('created_at', startDate.toISOString());
-            const { count: matchesCount, data: matchesData } = await matchesQuery;
+            const { count: matchesCount, data: matchesRows } = await matchesQuery;
 
-            // Fetch messages
-            let messagesQuery = supabase.from('messages').select('created_at', { count: 'exact' });
+            let messagesQuery = supabase.from('messages').select('created_at', { count: 'exact', head: true });
             if (startDate) messagesQuery = messagesQuery.gte('created_at', startDate.toISOString());
             const { count: messagesCount } = await messagesQuery;
 
             // Calculate metrics
-            const matchRate = likesCount > 0 ? ((matchesCount / likesCount) * 100).toFixed(1) : 0;
-            const messagesPerMatch = matchesCount > 0 ? (messagesCount / matchesCount).toFixed(1) : 0;
+            const matchRateVal = likesCount > 0 ? ((matchesCount / likesCount) * 100).toFixed(1) : 0;
+            const messagesPerMatchVal = matchesCount > 0 ? (messagesCount / matchesCount).toFixed(1) : 0;
 
-            setStats({
+            const newStats = {
                 totalLikes: likesCount || 0,
                 totalMatches: matchesCount || 0,
                 totalMessages: messagesCount || 0,
-                matchRate,
-                messagesPerMatch
-            });
+                matchRate: matchRateVal,
+                messagesPerMatch: messagesPerMatchVal,
+                avgRetentionD1: stats.avgRetentionD1 // keep existing or update later
+            };
 
             // Build daily data for chart
             const dailyStats = {};
-            const days = dateFilter === '1d' ? 1 : dateFilter === '7d' ? 7 : dateFilter === '30d' ? 30 : 30;
+
+            // Determine range for chart
+            let daysToChart = 30;
+            if (dateFilter === '1d') daysToChart = 2;
+            else if (dateFilter === '7d') daysToChart = 7;
+            else if (dateFilter === '30d') daysToChart = 30;
+            else if (dateFilter === 'all') {
+                // If All, find the earliest date in the data
+                const allDates = [...(likesRows || []), ...(matchesRows || [])].map(r => new Date(r.created_at));
+                if (allDates.length > 0) {
+                    const earliest = new Date(Math.min(...allDates));
+                    const diffTime = Math.abs(new Date() - earliest);
+                    daysToChart = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                }
+            }
 
             // Initialize days
-            for (let i = days - 1; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
+            const today = new Date();
+            for (let i = daysToChart - 1; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
                 const key = d.toISOString().split('T')[0];
                 dailyStats[key] = { date: key, likes: 0, matches: 0 };
             }
 
             // Count likes per day
-            if (likesData) {
-                likesData.forEach(item => {
+            if (likesRows) {
+                likesRows.forEach(item => {
                     const day = item.created_at?.split('T')[0];
                     if (dailyStats[day]) dailyStats[day].likes++;
                 });
             }
 
             // Count matches per day
-            if (matchesData) {
-                matchesData.forEach(item => {
+            if (matchesRows) {
+                matchesRows.forEach(item => {
                     const day = item.created_at?.split('T')[0];
                     if (dailyStats[day]) dailyStats[day].matches++;
                 });
             }
 
-            setDailyData(Object.values(dailyStats));
+            setDailyData(Object.values(dailyStats).sort((a, b) => a.date.localeCompare(b.date)));
 
             // Fetch retention data
             const { data: retentionRes, error: retentionError } = await supabase.rpc('get_user_retention');
@@ -128,8 +146,10 @@ const EngagementView = () => {
                 const totalSignups = retentionRes.reduce((acc, curr) => acc + curr.total_signups, 0);
                 const avgRetention = totalSignups > 0 ? ((totalReturned / totalSignups) * 100).toFixed(1) : 0;
 
-                setStats(prev => ({ ...prev, avgRetentionD1: avgRetention }));
+                newStats.avgRetentionD1 = avgRetention;
             }
+
+            setStats(newStats);
 
         } catch (error) {
             console.error('Error fetching engagement:', error);
@@ -291,8 +311,8 @@ const EngagementView = () => {
                     Atividade Diária
                 </h3>
 
-                <div className="engagement-chart-container">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="engagement-chart-container" style={{ width: '100%', height: '350px', minHeight: '300px' }}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
                         <BarChart
                             data={dailyData}
                             margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
