@@ -12,6 +12,8 @@ const STEP_NAMES = [
     { step: 5, name: 'Faith', desc: 'Fé' },
     { step: 6, name: 'Church', desc: 'Igreja' },
     { step: 7, name: 'Photos', desc: 'Fotos' },
+    { step: 8, name: 'Verification', desc: 'Verificação' },
+    { step: 9, name: 'Notifications', desc: 'Notificações' },
 ];
 
 const DATE_FILTERS = [
@@ -25,7 +27,7 @@ const DATE_FILTERS = [
 const FunnelView = () => {
     const [funnelData, setFunnelData] = useState([]);
     const [abandonments, setAbandonments] = useState([]);
-    const [completionRate, setCompletionRate] = useState({ completed: 0, abandoned: 0, total: 0, rate: 0 });
+    const [completionRate, setCompletionRate] = useState({ completed: 0, abandoned: 0, total: 0, rate: 0, verified: 0, notifications: 0 });
     const [loading, setLoading] = useState(true);
     const [showAbandonments, setShowAbandonments] = useState(false);
 
@@ -83,18 +85,11 @@ const FunnelView = () => {
         try {
             const { start, end } = getDateRange();
 
-            let query = supabase
-                .from('onboarding_progress')
-                .select('current_step, completed_at, started_at');
-
-            if (start) {
-                query = query.gte('started_at', start.toISOString());
-            }
-            if (end) {
-                query = query.lt('started_at', end.toISOString());
-            }
-
-            const { data: allData, error: allError } = await query;
+            // Use RPC functions to bypass RLS
+            const { data: allData, error: allError } = await supabase.rpc('get_funnel_data', {
+                p_start: start ? start.toISOString() : null,
+                p_end: end ? end.toISOString() : null
+            });
 
             if (allError) {
                 console.error('Error fetching funnel data:', allError);
@@ -102,22 +97,25 @@ const FunnelView = () => {
 
             if (allData && allData.length > 0) {
                 const totalInvolved = allData.length;
-                const completedCount = allData.filter(d => d.completed_at).length;
+                const completedCount = allData.filter(d => d.completed_at != null).length;
+                const verifiedCount = allData.filter(d =>
+                    d.verification_action && d.verification_action.toLowerCase() === 'verified'
+                ).length;
+                const notificationsCount = allData.filter(d => d.notification_enabled === true).length;
 
-                const stepReaches = new Array(8).fill(0);
-
-                // Calcular quantos estão parados em cada etapa (não completaram e current_step = etapa)
-                const stoppedAtStep = new Array(8).fill(0);
+                const stepReaches = new Array(STEP_NAMES.length).fill(0);
+                const stoppedAtStep = new Array(STEP_NAMES.length).fill(0);
 
                 allData.forEach(row => {
-                    const maxReached = row.completed_at ? 7 : row.current_step;
+                    const step = typeof row.current_step === 'number' ? row.current_step : parseInt(row.current_step, 10) || 0;
+                    const maxReached = row.completed_at != null ? (STEP_NAMES.length - 1) : Math.min(step, STEP_NAMES.length - 1);
+
                     for (let i = 0; i <= maxReached; i++) {
                         stepReaches[i]++;
                     }
 
-                    // Contar quem está parado em cada etapa (não completou)
-                    if (!row.completed_at) {
-                        stoppedAtStep[row.current_step]++;
+                    if (row.completed_at == null && step >= 0 && step < stoppedAtStep.length) {
+                        stoppedAtStep[step]++;
                     }
                 });
 
@@ -128,7 +126,6 @@ const FunnelView = () => {
                     const dropRate = prevCount > 0 ? ((dropCount / prevCount) * 100).toFixed(1) : 0;
                     const stoppedCount = stoppedAtStep[s.step];
 
-                    // Quem está no step X parou ANTES de completar o step X+1
                     const nextStep = STEP_NAMES[idx + 1];
                     const stoppedBeforeName = nextStep ? nextStep.name : 'Conclusão';
                     const stoppedBeforeDesc = nextStep ? nextStep.desc : 'Finalizando';
@@ -137,12 +134,12 @@ const FunnelView = () => {
                         step: s.step,
                         name: s.name,
                         desc: s.desc,
-                        count: count,
-                        dropCount: dropCount,
-                        dropRate: dropRate,
-                        stoppedCount: stoppedCount,
-                        stoppedBeforeName: stoppedBeforeName,
-                        stoppedBeforeDesc: stoppedBeforeDesc
+                        count,
+                        dropCount,
+                        dropRate,
+                        stoppedCount,
+                        stoppedBeforeName,
+                        stoppedBeforeDesc
                     };
                 });
 
@@ -151,29 +148,20 @@ const FunnelView = () => {
                     completed: completedCount,
                     abandoned: totalInvolved - completedCount,
                     total: totalInvolved,
-                    rate: totalInvolved > 0 ? ((completedCount / totalInvolved) * 100).toFixed(1) : 0
+                    rate: totalInvolved > 0 ? ((completedCount / totalInvolved) * 100).toFixed(1) : 0,
+                    verified: verifiedCount,
+                    notifications: notificationsCount
                 });
             } else {
-                setFunnelData(STEP_NAMES.map(s => ({ ...s, count: 0, dropCount: 0, dropRate: '0' })));
-                setCompletionRate({ completed: 0, abandoned: 0, total: 0, rate: 0 });
+                setFunnelData(STEP_NAMES.map(s => ({ ...s, count: 0, dropCount: 0, dropRate: '0', stoppedCount: 0, stoppedBeforeName: '', stoppedBeforeDesc: '' })));
+                setCompletionRate({ completed: 0, abandoned: 0, total: 0, rate: 0, verified: 0, notifications: 0 });
             }
 
-            // Abandonment details with same date filter
-            let abandonQuery = supabase
-                .from('onboarding_progress')
-                .select('user_id, current_step, step_name, started_at')
-                .is('completed_at', null)
-                .order('started_at', { ascending: false })
-                .limit(50);
-
-            if (start) {
-                abandonQuery = abandonQuery.gte('started_at', start.toISOString());
-            }
-            if (end) {
-                abandonQuery = abandonQuery.lt('started_at', end.toISOString());
-            }
-
-            const { data: abandonData, error: abandonError } = await abandonQuery;
+            // Abandonment details via RPC
+            const { data: abandonData, error: abandonError } = await supabase.rpc('get_funnel_abandonments', {
+                p_start: start ? start.toISOString() : null,
+                p_end: end ? end.toISOString() : null
+            });
 
             if (!abandonError && abandonData) {
                 setAbandonments(abandonData);
@@ -301,7 +289,7 @@ const FunnelView = () => {
                     Funil de Conversão
                 </h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
-                    Análise de retenção por etapa
+                    Análise de retenção por etapa ({completionRate.total} registros processados)
                 </p>
             </div>
 
@@ -379,6 +367,47 @@ const FunnelView = () => {
                 </div>
             </div>
 
+            {/* Onboarding Decisions Stats */}
+            <div className="glass-panel" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
+                <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', fontWeight: 600 }}>
+                    <Users size={18} color="#f59e0b" />
+                    Decisões de Onboarding
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                    {/* Verification Stat */}
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Verificação</span>
+                            <span style={{ color: '#10b981', fontWeight: 700 }}>
+                                {completionRate.total > 0 ? ((completionRate.verified / completionRate.total) * 100).toFixed(1) : 0}%
+                            </span>
+                        </div>
+                        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${completionRate.total > 0 ? (completionRate.verified / completionRate.total) * 100 : 0}%`, height: '100%', background: '#10b981' }} />
+                        </div>
+                        <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {completionRate.verified} usuários verificados
+                        </p>
+                    </div>
+
+                    {/* Notification Stat */}
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Notificações</span>
+                            <span style={{ color: '#3b82f6', fontWeight: 700 }}>
+                                {completionRate.total > 0 ? ((completionRate.notifications / completionRate.total) * 100).toFixed(1) : 0}%
+                            </span>
+                        </div>
+                        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${completionRate.total > 0 ? (completionRate.notifications / completionRate.total) * 100 : 0}%`, height: '100%', background: '#3b82f6' }} />
+                        </div>
+                        <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {completionRate.notifications} ativaram
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             {/* Funnel Chart */}
             <div className="glass-panel" style={{ padding: '1rem', marginBottom: '1rem' }}>
                 <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', fontWeight: 600 }}>
@@ -386,8 +415,8 @@ const FunnelView = () => {
                     Usuários por Etapa
                 </h3>
 
-                <div className="funnel-chart-container">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="funnel-chart-container" style={{ width: '100%', height: '350px', minHeight: '300px' }}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
                         <BarChart
                             data={funnelData}
                             layout="vertical"
@@ -474,10 +503,10 @@ const FunnelView = () => {
                     Quantas pessoas desistiram antes de chegar a cada etapa
                 </p>
 
-                <div className="funnel-chart-container">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="funnel-chart-container" style={{ width: '100%', height: '350px', minHeight: '300px' }}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
                         <BarChart
-                            data={funnelData.filter(d => d.step < 7)}
+                            data={funnelData}
                             layout="vertical"
                             margin={{ top: 5, right: 40, left: 70, bottom: 5 }}
                             barSize={24}
