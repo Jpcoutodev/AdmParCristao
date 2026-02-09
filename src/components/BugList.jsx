@@ -27,7 +27,28 @@ const BugList = () => {
         if (error) {
             console.error('Error fetching bugs:', error);
         } else {
-            setBugs(data);
+            // Client-side sorting for custom status order
+            const statusPriority = {
+                'pending': 0,
+                'in_progress': 1,
+                'resolved': 2,
+                'closed': 3
+            };
+
+            const sortedData = (data || []).sort((a, b) => {
+                // Primary sort: Status
+                const statusA = statusPriority[a.status] ?? 99;
+                const statusB = statusPriority[b.status] ?? 99;
+
+                if (statusA !== statusB) {
+                    return statusA - statusB;
+                }
+
+                // Secondary sort: Date (newest first) - already sorted by query but good to ensure
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            setBugs(sortedData);
         }
         setLoading(false);
     };

@@ -10,6 +10,7 @@ import EngagementView from './components/EngagementView';
 import DeletionFeedbackList from './components/DeletionFeedbackList';
 import BugList from './components/BugList';
 import PublicoStats from './components/PublicoStats';
+import ModerationList from './components/ModerationList';
 import Login from './components/Login';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [unreadReportsCount, setUnreadReportsCount] = useState(0);
   const [unreadVerificationsCount, setUnreadVerificationsCount] = useState(0);
+  const [activeBugsCount, setActiveBugsCount] = useState(0);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
   useEffect(() => {
@@ -76,6 +78,7 @@ function App() {
 
     fetchUnreadReportsCount();
     fetchUnreadVerificationsCount();
+    fetchActiveBugsCount();
 
     // Subscribe to changes in reports table
     const reportsSubscription = supabase
@@ -121,6 +124,17 @@ function App() {
     }
   };
 
+  const fetchActiveBugsCount = async () => {
+    const { count, error } = await supabase
+      .from('error_reports')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending');
+
+    if (!error) {
+      setActiveBugsCount(count);
+    }
+  };
+
   const handleReportsSeen = () => {
     setUnreadReportsCount(0);
   };
@@ -161,6 +175,7 @@ function App() {
         onClose={() => setIsSidebarOpen(false)}
         unreadReports={unreadReportsCount}
         unreadVerifications={unreadVerificationsCount}
+        activeBugsCount={activeBugsCount}
         onLogout={handleLogout}
       />
 
@@ -200,6 +215,7 @@ function App() {
           {activeTab === 'funnel' && <FunnelView />}
           {activeTab === 'engagement' && <EngagementView />}
           {activeTab === 'verification' && <VerificationList onVerificationsSeen={handleVerificationsSeen} />}
+          {activeTab === 'moderation' && <ModerationList />}
           {activeTab === 'reports' && <ReportList onReportsSeen={handleReportsSeen} />}
           {activeTab === 'deletion_feedback' && <DeletionFeedbackList />}
           {activeTab === 'bugs' && <BugList />}
