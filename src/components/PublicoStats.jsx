@@ -15,44 +15,22 @@ const PublicoStats = () => {
 
     const fetchAllStats = async () => {
         try {
-            // Fetch RPC stats and raw profile data for manual aggregation
-            const [cityRes, ageRes, profilesRes] = await Promise.all([
+            const [cityRes, ageRes, stateRes, countryRes] = await Promise.all([
                 supabase.rpc('get_city_stats'),
                 supabase.rpc('get_age_stats'),
-                supabase.from('profiles').select('state, country')
+                supabase.rpc('get_state_stats'),
+                supabase.rpc('get_country_stats'),
             ]);
 
             if (cityRes.error) throw cityRes.error;
             if (ageRes.error) throw ageRes.error;
-            if (profilesRes.error) throw profilesRes.error;
+            if (stateRes.error) throw stateRes.error;
+            if (countryRes.error) throw countryRes.error;
 
             setCityStats(cityRes.data || []);
             setAgeStats(ageRes.data || []);
-
-            // Process State and Country Stats locally
-            const stateCounts = {};
-            const countryCounts = {};
-
-            profilesRes.data.forEach(profile => {
-                // Normalize and count states
-                const state = profile.state ? profile.state.trim() : 'Não informado';
-                stateCounts[state] = (stateCounts[state] || 0) + 1;
-
-                // Normalize and count countries
-                const country = profile.country ? profile.country.trim() : 'Não informado';
-                countryCounts[country] = (countryCounts[country] || 0) + 1;
-            });
-
-            const sortedStates = Object.entries(stateCounts)
-                .map(([name, count]) => ({ state: name, count }))
-                .sort((a, b) => b.count - a.count);
-
-            const sortedCountries = Object.entries(countryCounts)
-                .map(([name, count]) => ({ country: name, count }))
-                .sort((a, b) => b.count - a.count);
-
-            setStateStats(sortedStates);
-            setCountryStats(sortedCountries);
+            setStateStats(stateRes.data || []);
+            setCountryStats(countryRes.data || []);
 
         } catch (error) {
             console.error('Error fetching stats:', error);

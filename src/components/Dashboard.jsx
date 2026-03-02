@@ -75,7 +75,8 @@ const Dashboard = () => {
                 .from('profiles')
                 .select('created_at')
                 .gte('created_at', startDate.toISOString())
-                .order('created_at', { ascending: true });
+                .order('created_at', { ascending: true })
+                .limit(10000);
 
             if (!usersError && usersData) {
                 const growthMap = {};
@@ -101,24 +102,26 @@ const Dashboard = () => {
             }
 
             // 2. Gender Distribution
-            const { data: genderData, error: genderError } = await supabase
-                .from('profiles')
-                .select('gender');
+            const [
+                { count: maleCount },
+                { count: femaleCount },
+                { count: unkCount }
+            ] = await Promise.all([
+                supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('gender', 'Masculino'),
+                supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('gender', 'Feminino'),
+                supabase.from('profiles').select('*', { count: 'exact', head: true }).is('gender', null)
+            ]);
 
-            if (!genderError && genderData) {
-                const genderMap = usersData ? genderData.reduce((acc, curr) => {
-                    const gender = curr.gender || 'Não informado';
-                    acc[gender] = (acc[gender] || 0) + 1;
-                    return acc;
-                }, {}) : {};
+            const genderArray = [
+                { name: 'Homens', value: maleCount || 0 },
+                { name: 'Mulheres', value: femaleCount || 0 }
+            ];
 
-                const genderArray = Object.keys(genderMap).map(name => ({
-                    name: name === 'male' ? 'Homens' : name === 'female' ? 'Mulheres' : name,
-                    value: genderMap[name]
-                }));
-
-                setChartData(prev => ({ ...prev, gender: genderArray }));
+            if (unkCount > 0) {
+                genderArray.push({ name: 'Não informado', value: unkCount });
             }
+
+            setChartData(prev => ({ ...prev, gender: genderArray }));
 
         } catch (error) {
             console.error("Error fetching chart data:", error);

@@ -11,6 +11,7 @@ import DeletionFeedbackList from './components/DeletionFeedbackList';
 import BugList from './components/BugList';
 import PublicoStats from './components/PublicoStats';
 import ModerationList from './components/ModerationList';
+import ProfileEvaluation from './components/ProfileEvaluation';
 import Login from './components/Login';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
   const [unreadReportsCount, setUnreadReportsCount] = useState(0);
   const [unreadVerificationsCount, setUnreadVerificationsCount] = useState(0);
   const [activeBugsCount, setActiveBugsCount] = useState(0);
+  const [unapprovedCount, setUnapprovedCount] = useState(0);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
   useEffect(() => {
@@ -79,6 +81,7 @@ function App() {
     fetchUnreadReportsCount();
     fetchUnreadVerificationsCount();
     fetchActiveBugsCount();
+    fetchUnapprovedCount();
 
     // Subscribe to changes in reports table
     const reportsSubscription = supabase
@@ -135,6 +138,14 @@ function App() {
     }
   };
 
+  const fetchUnapprovedCount = async () => {
+    const { count, error } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .or('verified.is.null,verified.eq.false');
+    if (!error) setUnapprovedCount(count || 0);
+  };
+
   const handleReportsSeen = () => {
     setUnreadReportsCount(0);
   };
@@ -176,6 +187,7 @@ function App() {
         unreadReports={unreadReportsCount}
         unreadVerifications={unreadVerificationsCount}
         activeBugsCount={activeBugsCount}
+        unapprovedCount={unapprovedCount}
         onLogout={handleLogout}
       />
 
@@ -219,6 +231,7 @@ function App() {
           {activeTab === 'reports' && <ReportList onReportsSeen={handleReportsSeen} />}
           {activeTab === 'deletion_feedback' && <DeletionFeedbackList />}
           {activeTab === 'bugs' && <BugList />}
+          {activeTab === 'profile_eval' && <ProfileEvaluation onCountChange={setUnapprovedCount} />}
         </div>
       </main>
     </div>
