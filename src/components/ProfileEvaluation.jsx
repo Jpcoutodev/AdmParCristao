@@ -228,6 +228,11 @@ const ProfileEvaluation = ({ onCountChange }) => {
                                 </span>
                             )}
                         </div>
+                        {profile?.created_at && (
+                            <p style={{ margin: '0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                📅 Criado em {new Date(profile.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                            </p>
+                        )}
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1.5rem', fontSize: '0.9rem' }}>
                             {profile?.city && <InfoRow label="Cidade" value={`${profile.city}${profile.state ? ' / ' + profile.state : ''}`} />}
@@ -242,9 +247,7 @@ const ProfileEvaluation = ({ onCountChange }) => {
                             </div>
                         )}
 
-                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            Criado em {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('pt-BR') : '-'}
-                        </p>
+
                     </div>
 
                     {/* Evaluation controls */}
