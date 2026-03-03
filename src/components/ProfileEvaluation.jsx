@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle, SkipForward, PartyPopper, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, SkipForward, PartyPopper, Loader2, Trash2 } from 'lucide-react';
 
 const PAGE_SIZE = 20;
 
@@ -11,6 +11,8 @@ const ProfileEvaluation = ({ onCountChange }) => {
     const [hasMore, setHasMore] = useState(true);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [photoIndex, setPhotoIndex] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
 
@@ -67,6 +69,73 @@ const ProfileEvaluation = ({ onCountChange }) => {
             fetchNextBatch(lastCreatedAt);
         }
     }, [index, queue.length, hasMore, lastCreatedAt, fetchNextBatch]);
+
+    // Extrair bucket e path de uma URL do Supabase Storage
+    const extractStoragePath = (url) => {
+        try {
+            const urlObj = new URL(url);
+            const pathParts = urlObj.pathname.split('/storage/v1/object/public/');
+            if (pathParts.length > 1) {
+                const fullPath = pathParts[1];
+                const slashIndex = fullPath.indexOf('/');
+                if (slashIndex > -1) {
+                    return {
+                        bucket: fullPath.substring(0, slashIndex),
+                        filePath: fullPath.substring(slashIndex + 1),
+                    };
+                }
+            }
+            return null;
+        } catch (e) {
+            console.error('Error parsing storage URL:', e);
+            return null;
+        }
+    };
+
+    const handleDeleteProfile = async () => {
+        const profile = queue[index];
+        if (!profile) return;
+
+        setDeleting(true);
+        setShowDeleteConfirm(false);
+
+        try {
+            // 1. Deletar fotos do Storage
+            const photos = profile.image_urls?.filter(Boolean) || [];
+            for (const url of photos) {
+                const pathInfo = extractStoragePath(url);
+                if (pathInfo) {
+                    const { error } = await supabase.storage
+                        .from(pathInfo.bucket)
+                        .remove([pathInfo.filePath]);
+                    if (error) console.error('Erro ao deletar foto do storage:', error);
+                }
+            }
+
+            // 2. Deletar perfil (cascade cuida de likes, matches, messages etc.)
+            const { error: deleteError } = await supabase
+                .from('profiles')
+                .delete()
+                .eq('id', profile.id);
+
+            if (deleteError) {
+                console.error('Erro ao excluir perfil:', deleteError);
+                alert('Erro ao excluir perfil: ' + deleteError.message);
+            } else {
+                // Remover da fila local e atualizar contagem
+                setQueue(prev => prev.filter((_, i) => i !== index));
+                // Se removemos o item atual, não precisamos avançar o index
+                // porque o próximo item agora tem o mesmo index
+                setPhotoIndex(0);
+                fetchCount();
+            }
+        } catch (err) {
+            console.error('Erro inesperado ao excluir perfil:', err);
+            alert('Erro inesperado ao excluir perfil.');
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     const advanceQueue = () => {
         setIndex(prev => prev + 1);
@@ -323,6 +392,19 @@ const ProfileEvaluation = ({ onCountChange }) => {
                         {/* Action buttons */}
                         <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--glass-border)' }}>
                             <button
+                                onClick={() => setShowDeleteConfirm(true)}
+                                disabled={deleting}
+                                title="Excluir perfil permanentemente"
+                                style={{
+                                    padding: '0.75rem', border: '2px solid rgba(239,68,68,0.3)', borderRadius: '10px',
+                                    background: 'rgba(239,68,68,0.08)', color: '#ef4444', cursor: deleting ? 'not-allowed' : 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                    fontSize: '0.9rem', fontWeight: 600, transition: 'all 0.2s', opacity: deleting ? 0.5 : 1
+                                }}
+                            >
+                                {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                            </button>
+                            <button
                                 onClick={handleSkip}
                                 style={{ padding: '0.75rem 1.25rem', border: '1px solid var(--glass-border)', borderRadius: '10px', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}
                             >
@@ -343,6 +425,54 @@ const ProfileEvaluation = ({ onCountChange }) => {
                                 {saving ? <Loader2 size={18} className="animate-spin" /> : '✓ Salvar & Próximo'}
                             </button>
                         </div>
+
+                        {/* Delete confirmation dialog */}
+                        {showDeleteConfirm && (
+                            <div style={{
+                                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+                            }}>
+                                <div style={{
+                                    background: 'var(--glass-bg, #1a1a2e)', border: '1px solid var(--glass-border)',
+                                    borderRadius: '16px', padding: '2rem', maxWidth: '420px', width: '90%',
+                                    display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Trash2 size={20} color="#ef4444" />
+                                        </div>
+                                        <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Excluir Perfil</h3>
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
+                                        Tem certeza que deseja <strong style={{ color: '#ef4444' }}>excluir permanentemente</strong> o perfil de <strong>{profile?.name || '(sem nome)'}</strong>?
+                                        <br /><br />
+                                        Esta ação <strong>não pode ser desfeita</strong> e removerá todos os dados, fotos, likes, matches e mensagens do usuário.
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(false)}
+                                            style={{
+                                                padding: '0.65rem 1.5rem', border: '1px solid var(--glass-border)',
+                                                borderRadius: '10px', background: 'transparent', color: 'var(--text-muted)',
+                                                cursor: 'pointer', fontWeight: 500, fontSize: '0.9rem'
+                                            }}
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            onClick={handleDeleteProfile}
+                                            style={{
+                                                padding: '0.65rem 1.5rem', border: 'none', borderRadius: '10px',
+                                                background: '#ef4444', color: 'white', cursor: 'pointer',
+                                                fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem'
+                                            }}
+                                        >
+                                            <Trash2 size={14} /> Excluir Perfil
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         {aprovado === null && (
                             <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                                 Selecione "Aprovar" ou "Reprovar" para salvar
