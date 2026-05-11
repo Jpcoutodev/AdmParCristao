@@ -141,3 +141,156 @@ h6 {
     display: none;
   }
 }
+
+/* ─── Financeiro Responsive ─── */
+.fin-container {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.fin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.fin-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.fin-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.fin-table-filters {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.fin-search {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  width: 180px;
+}
+
+.fin-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 700px;
+}
+
+.fin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.fin-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  width: 450px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .fin-container {
+    padding: 0.75rem;
+    gap: 1rem;
+  }
+
+  .fin-header h1 {
+    font-size: 1.3rem !important;
+  }
+
+  .fin-header p {
+    font-size: 0.8rem !important;
+  }
+
+  .fin-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .fin-card {
+    padding: 0.75rem !important;
+  }
+
+  .fin-card .fin-card-value {
+    font-size: 1.1rem !important;
+  }
+
+  .fin-card .fin-card-label {
+    font-size: 0.7rem !important;
+  }
+
+  .fin-card .fin-card-sub {
+    font-size: 0.65rem !important;
+  }
+
+  .fin-table-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fin-search {
+    width: 100%;
+  }
+
+  .fin-table-filters {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .fin-table {
+    font-size: 0.75rem;
+    min-width: 600px;
+  }
+
+  .fin-modal {
+    width: 100%;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .fin-selection-bar {
+    flex-direction: column;
+    gap: 0.3rem;
+    text-align: center;
+  }
+}

@@ -347,9 +347,9 @@ export default function FinanceiroView() {
   const tdStyle = { padding: '0.7rem 0.5rem', textAlign: 'center', verticalAlign: 'middle' };
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="fin-container">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="fin-header">
         <div>
           <h1 style={{ fontSize: '1.8rem', margin: 0 }}>💰 Financeiro</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Controle de despesas e créditos</p>
@@ -365,46 +365,46 @@ export default function FinanceiroView() {
       </div>
 
       {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        <div style={cardStyle('#ef4444')}>
+      <div className="fin-cards">
+        <div className="fin-card" style={cardStyle('#ef4444')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <ArrowDownCircle size={18} color="#ef4444" />
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total Despesas</span>
+            <span className="fin-card-label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total Despesas</span>
           </div>
-          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ef4444' }}>{fmt(grandTotalExp)}</span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activeExpenses.length} lançamentos</span>
+          <span className="fin-card-value" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ef4444' }}>{fmt(grandTotalExp)}</span>
+          <span className="fin-card-sub" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activeExpenses.length} lançamentos</span>
         </div>
-        <div style={cardStyle('#22c55e')}>
+        <div className="fin-card" style={cardStyle('#22c55e')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <ArrowUpCircle size={18} color="#22c55e" />
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total Créditos</span>
+            <span className="fin-card-label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total Créditos</span>
           </div>
-          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#22c55e' }}>{fmt(grandTotalCred)}</span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activeCredits.length} lançamentos</span>
+          <span className="fin-card-value" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#22c55e' }}>{fmt(grandTotalCred)}</span>
+          <span className="fin-card-sub" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activeCredits.length} lançamentos</span>
         </div>
-        <div style={cardStyle(balance >= 0 ? '#22c55e' : '#ef4444')}>
+        <div className="fin-card" style={cardStyle(balance >= 0 ? '#22c55e' : '#ef4444')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <DollarSign size={18} color={balance >= 0 ? '#22c55e' : '#ef4444'} />
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Saldo Mensal</span>
+            <span className="fin-card-label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Saldo Mensal</span>
           </div>
-          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: balance >= 0 ? '#22c55e' : '#ef4444' }}>{fmt(balance)}</span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>recorrentes</span>
+          <span className="fin-card-value" style={{ fontSize: '1.5rem', fontWeight: 700, color: balance >= 0 ? '#22c55e' : '#ef4444' }}>{fmt(balance)}</span>
+          <span className="fin-card-sub" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>recorrentes</span>
         </div>
-        <div style={cardStyle('#f59e0b')}>
+        <div className="fin-card" style={cardStyle('#f59e0b')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Calendar size={18} color="#f59e0b" />
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Pontuais (mês atual)</span>
+            <span className="fin-card-label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Pontuais (mês atual)</span>
           </div>
-          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f59e0b' }}>{fmt(totalOneOffCred - totalOneOffExp)}</span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{oneOffExpThisMonth.length} desp · {oneOffCredThisMonth.length} créd</span>
+          <span className="fin-card-value" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f59e0b' }}>{fmt(totalOneOffCred - totalOneOffExp)}</span>
+          <span className="fin-card-sub" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{oneOffExpThisMonth.length} desp · {oneOffCredThisMonth.length} créd</span>
         </div>
-        <div style={cardStyle(grandTotalCred - grandTotalExp >= 0 ? '#22c55e' : '#ef4444')}>
+        <div className="fin-card" style={cardStyle(grandTotalCred - grandTotalExp >= 0 ? '#22c55e' : '#ef4444')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <DollarSign size={18} color={grandTotalCred - grandTotalExp >= 0 ? '#22c55e' : '#ef4444'} />
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Balanço Geral</span>
+            <span className="fin-card-label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Balanço Geral</span>
           </div>
-          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: grandTotalCred - grandTotalExp >= 0 ? '#22c55e' : '#ef4444' }}>{fmt(grandTotalCred - grandTotalExp)}</span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>créditos − despesas</span>
+          <span className="fin-card-value" style={{ fontSize: '1.5rem', fontWeight: 700, color: grandTotalCred - grandTotalExp >= 0 ? '#22c55e' : '#ef4444' }}>{fmt(grandTotalCred - grandTotalExp)}</span>
+          <span className="fin-card-sub" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>créditos − despesas</span>
         </div>
       </div>
 
@@ -437,13 +437,13 @@ export default function FinanceiroView() {
 
       {/* Tabela de Lançamentos */}
       <div style={sectionStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div className="fin-table-header">
           <h3 style={{ margin: 0, fontSize: '1.1rem' }}>📋 Todos os Lançamentos</h3>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="fin-table-filters">
             <input
               type="text" placeholder="🔍 Pesquisar..." value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setSelectedIdxs(new Set()); }}
-              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'var(--text-primary)', fontFamily: 'Inter, sans-serif', width: '180px' }}
+              className="fin-search"
             />
             {[{ k: 'all', l: 'Todos' }, { k: 'expense', l: 'Despesas' }, { k: 'credit', l: 'Créditos' }].map(f => (
               <button key={f.k} onClick={() => { setTableFilter(f.k); setSelectedIdxs(new Set()); }} style={{
@@ -457,15 +457,15 @@ export default function FinanceiroView() {
         </div>
         {/* Barra de seleção */}
         {selectedIdxs.size > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 1rem', marginBottom: '0.75rem', background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.25)', borderRadius: '8px' }}>
+          <div className="fin-selection-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 1rem', marginBottom: '0.75rem', background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.25)', borderRadius: '8px' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{selectedIdxs.size} selecionado(s)</span>
             <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#a855f7' }}>
               Soma: {fmt(Array.from(selectedIdxs).reduce((sum, i) => sum + Number(allEntries[i]?.amount || 0), 0))}
             </span>
           </div>
         )}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+        <div className="fin-table-wrap">
+          <table className="fin-table">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
                 <th style={{ ...thStyle, width: '40px' }}>
