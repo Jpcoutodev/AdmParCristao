@@ -398,6 +398,14 @@ export default function FinanceiroView() {
           <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f59e0b' }}>{fmt(totalOneOffCred - totalOneOffExp)}</span>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{oneOffExpThisMonth.length} desp · {oneOffCredThisMonth.length} créd</span>
         </div>
+        <div style={cardStyle(grandTotalCred - grandTotalExp >= 0 ? '#22c55e' : '#ef4444')}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <DollarSign size={18} color={grandTotalCred - grandTotalExp >= 0 ? '#22c55e' : '#ef4444'} />
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Balanço Geral</span>
+          </div>
+          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: grandTotalCred - grandTotalExp >= 0 ? '#22c55e' : '#ef4444' }}>{fmt(grandTotalCred - grandTotalExp)}</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>créditos − despesas</span>
+        </div>
       </div>
 
       {/* Chart */}
