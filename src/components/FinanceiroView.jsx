@@ -289,11 +289,20 @@ export default function FinanceiroView() {
 
       data.push({ name: label, despesas: recExp + oExp, creditos: recCred + oCred, saldo: (recCred + oCred) - (recExp + oExp) });
     }
-    // Calcular balanço geral acumulado
-    let acumulado = 0;
-    data.forEach(d => {
-      acumulado += d.creditos - d.despesas;
-      d.balancoGeral = acumulado;
+    // Calcular balanço geral: soma de todos os registros (cada um contado 1x) até aquele mês
+    data.forEach((d, idx) => {
+      const mDate = new Date(currentYear, currentMonth - (11 - idx) + 1, 0); // fim do mês
+      let tExp = 0;
+      expenses.filter(e => e.status === 'active').forEach(e => {
+        const dt = e.expense_date ? new Date(e.expense_date) : new Date(e.created_at);
+        if (dt <= mDate) tExp += Number(e.amount);
+      });
+      let tCred = 0;
+      credits.filter(c => c.status === 'active').forEach(c => {
+        const dt = c.credit_date ? new Date(c.credit_date) : new Date(c.created_at);
+        if (dt <= mDate) tCred += Number(c.amount);
+      });
+      d.balancoGeral = tCred - tExp;
     });
     return data;
   }, [expenses, credits, currentMonth, currentYear]);
