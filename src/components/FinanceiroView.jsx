@@ -289,6 +289,12 @@ export default function FinanceiroView() {
 
       data.push({ name: label, despesas: recExp + oExp, creditos: recCred + oCred, saldo: (recCred + oCred) - (recExp + oExp) });
     }
+    // Calcular balanço geral acumulado
+    let acumulado = 0;
+    data.forEach(d => {
+      acumulado += d.creditos - d.despesas;
+      d.balancoGeral = acumulado;
+    });
     return data;
   }, [expenses, credits, currentMonth, currentYear]);
 
@@ -430,7 +436,8 @@ export default function FinanceiroView() {
             <Legend wrapperStyle={{ fontSize: '0.85rem' }} />
             <Area type="monotone" dataKey="despesas" name="Despesas" stroke="#ef4444" fill="url(#gradExp)" strokeWidth={2} />
             <Area type="monotone" dataKey="creditos" name="Créditos" stroke="#22c55e" fill="url(#gradCred)" strokeWidth={2} />
-            <Line type="monotone" dataKey="saldo" name="Saldo" stroke="#a855f7" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+            <Line type="monotone" dataKey="saldo" name="Saldo Mensal" stroke="#a855f7" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+            <Line type="monotone" dataKey="balancoGeral" name="Balanço Geral" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3, fill: '#f59e0b' }} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
