@@ -12,6 +12,7 @@ import BugList from './components/BugList';
 import PublicoStats from './components/PublicoStats';
 import ModerationList from './components/ModerationList';
 import ProfileEvaluation from './components/ProfileEvaluation';
+import FinanceiroView from './components/FinanceiroView';
 import Login from './components/Login';
 
 function App() {
@@ -232,6 +233,7 @@ function App() {
           {activeTab === 'deletion_feedback' && <DeletionFeedbackList />}
           {activeTab === 'bugs' && <BugList />}
           {activeTab === 'profile_eval' && <ProfileEvaluation onCountChange={setUnapprovedCount} />}
+          {activeTab === 'financeiro' && <FinanceiroView />}
         </div>
       </main>
     </div>
