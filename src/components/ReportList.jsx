@@ -6,7 +6,8 @@ const ReportList = ({ onReportsSeen }) => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState('all');
-    const [selectedUser, setSelectedUser] = useState(null);
+    const [selectedReport, setSelectedReport] = useState(null);
+    const selectedUser = selectedReport?.reported;
 
     useEffect(() => {
         fetchReports();
@@ -20,7 +21,8 @@ const ReportList = ({ onReportsSeen }) => {
             .select(`
         *,
         reporter:reporter_id(name),
-        reported:reported_id(name, id, image_urls, age, bio)
+        reported:reported_id(name, id, image_urls, age, bio),
+        post:post_id(*)
       `)
             .order('created_at', { ascending: false });
 
@@ -117,11 +119,11 @@ const ReportList = ({ onReportsSeen }) => {
 
     return (
         <div style={{ padding: '2rem', flex: 1, overflowY: 'auto' }}>
-            {selectedUser && (
-                <div className="sidebar-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setSelectedUser(null)}>
+            {selectedReport && selectedUser && (
+                <div className="sidebar-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setSelectedReport(null)}>
                     <div className="glass-panel" style={{ width: '90%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', background: 'var(--bg-secondary)', position: 'relative' }} onClick={e => e.stopPropagation()}>
                         <button
-                            onClick={() => setSelectedUser(null)}
+                            onClick={() => setSelectedReport(null)}
                             style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                         >
                             <X size={24} />
@@ -162,6 +164,22 @@ const ReportList = ({ onReportsSeen }) => {
                                     )}
                                 </div>
                             </div>
+
+                            {selectedReport.post && (
+                                <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', marginTop: '0.5rem' }}>
+                                    <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#ef4444' }}>Post Denunciado</h3>
+                                    <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                                        {selectedReport.post.content && (
+                                            <p style={{ lineHeight: '1.5', marginBottom: selectedReport.post.image_url ? '1rem' : '0' }}>{selectedReport.post.content}</p>
+                                        )}
+                                        {selectedReport.post.image_url && (
+                                            <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                                                <img src={selectedReport.post.image_url} alt="Post" style={{ width: '100%', height: 'auto', objectFit: 'cover', cursor: 'pointer' }} onClick={() => window.open(selectedReport.post.image_url, '_blank')} />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -237,9 +255,9 @@ const ReportList = ({ onReportsSeen }) => {
                                 <td style={{ padding: '1.25rem' }}>
                                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                                         <button
-                                            onClick={() => setSelectedUser(report.reported)}
+                                            onClick={() => setSelectedReport(report)}
                                             style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
-                                            title="Ver Perfil"
+                                            title={report.post_id ? "Ver Perfil e Post" : "Ver Perfil"}
                                         >
                                             <Eye size={20} />
                                         </button>
