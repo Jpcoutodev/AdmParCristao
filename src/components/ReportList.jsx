@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { ShieldOff, CheckCircle, Eye, X, Trash2 } from 'lucide-react';
+import { ShieldOff, CheckCircle, Eye, X, Trash2, MessageSquareX } from 'lucide-react';
 
 const ReportList = ({ onReportsSeen }) => {
     const [reports, setReports] = useState([]);
@@ -112,6 +112,42 @@ const ReportList = ({ onReportsSeen }) => {
         }
 
         alert('Usuário excluído com sucesso!');
+        fetchReports();
+    };
+
+    const handleDeletePost = async (reportId, postId) => {
+        if (!postId) {
+            alert('Erro: ID do post não encontrado');
+            return;
+        }
+
+        const confirmDelete = window.confirm('Tem certeza que deseja EXCLUIR APENAS ESTE POST? Esta ação não pode ser desfeita e o usuário não será excluído.');
+        if (!confirmDelete) return;
+
+        const { error: deleteError } = await supabase
+            .from('posts')
+            .delete()
+            .eq('id', postId);
+
+        if (deleteError) {
+            console.error('Error deleting post:', deleteError);
+            alert('Erro ao excluir post: ' + deleteError.message);
+            return;
+        }
+
+        // Marca a denúncia como resolvida
+        const { error: reportError } = await supabase
+            .from('reports')
+            .update({ status: 'resolved', reviewed_at: new Date().toISOString() })
+            .eq('id', reportId);
+
+        if (reportError) {
+            console.error('Error updating report:', reportError);
+            alert('Post excluído, mas houve erro ao atualizar a denúncia.');
+        } else {
+            alert('Post excluído com sucesso!');
+        }
+
         fetchReports();
     };
 
@@ -280,10 +316,19 @@ const ReportList = ({ onReportsSeen }) => {
                                         <button
                                             onClick={() => handleDeleteUser(report.id, report.reported?.id)}
                                             style={{ background: 'transparent', border: 'none', color: '#b91c1c', cursor: 'pointer' }}
-                                            title="Excluir Usuário"
+                                            title="Excluir Usuário e o Post"
                                         >
                                             <Trash2 size={20} />
                                         </button>
+                                        {report.post_id && (
+                                            <button
+                                                onClick={() => handleDeletePost(report.id, report.post_id)}
+                                                style={{ background: 'transparent', border: 'none', color: '#f97316', cursor: 'pointer' }}
+                                                title="Excluir Apenas o Post"
+                                            >
+                                                <MessageSquareX size={20} />
+                                            </button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>

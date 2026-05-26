@@ -137,6 +137,55 @@ const ProfileEvaluation = ({ onCountChange }) => {
         }
     };
 
+    const handleDeletePhoto = async (photoUrl) => {
+        if (!photoUrl) return;
+        const confirmDelete = window.confirm('Tem certeza que deseja excluir esta foto específica do perfil?');
+        if (!confirmDelete) return;
+
+        const profile = queue[index];
+        if (!profile) return;
+
+        try {
+            // 1. Deletar do Storage
+            const pathInfo = extractStoragePath(photoUrl);
+            if (pathInfo) {
+                const { error: storageError } = await supabase.storage
+                    .from(pathInfo.bucket)
+                    .remove([pathInfo.filePath]);
+                if (storageError) console.error('Erro ao deletar foto do storage:', storageError);
+            }
+
+            // 2. Atualizar tabela profiles no DB
+            const updatedImages = (profile.image_urls || []).filter(url => url !== photoUrl);
+            const { error: dbError } = await supabase
+                .from('profiles')
+                .update({ image_urls: updatedImages })
+                .eq('id', profile.id);
+
+            if (dbError) {
+                console.error('Erro ao salvar no banco:', dbError);
+                alert('Erro ao excluir foto do perfil: ' + dbError.message);
+                return;
+            }
+
+            // 3. Atualizar estado local
+            setQueue(prev => prev.map((item, idx) => idx === index ? { ...item, image_urls: updatedImages } : item));
+            
+            // Ajustar o índice da foto ativa
+            setPhotoIndex(prev => {
+                if (prev >= updatedImages.length) {
+                    return Math.max(0, updatedImages.length - 1);
+                }
+                return prev;
+            });
+
+            alert('Foto excluída com sucesso.');
+        } catch (err) {
+            console.error('Erro ao excluir foto:', err);
+            alert('Ocorreu um erro ao tentar excluir a foto.');
+        }
+    };
+
     const advanceQueue = () => {
         setIndex(prev => prev + 1);
     };
@@ -196,7 +245,7 @@ const ProfileEvaluation = ({ onCountChange }) => {
     const progressPct = totalCount > 0 ? Math.min(100, (index / (index + totalCount)) * 100) : 0;
 
     return (
-        <div style={{ padding: '2rem', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="eval-container">
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
@@ -217,19 +266,45 @@ const ProfileEvaluation = ({ onCountChange }) => {
             </div>
 
             {/* Main Card */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px,420px) 1fr', gap: '1.5rem', alignItems: 'start' }}>
+            <div className="eval-grid">
 
                 {/* Left: Photo carousel */}
                 <div className="glass-panel" style={{ padding: 0, overflow: 'hidden', borderRadius: '16px', position: 'relative' }}>
                     <div style={{ position: 'relative', width: '100%', aspectRatio: '3/4', background: '#111', overflow: 'hidden' }}>
                         {photos.length > 0 ? (
-                            <img
-                                key={photos[photoIndex]}
-                                src={photos[photoIndex]}
-                                alt="foto"
-                                loading="lazy"
-                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                            />
+                            <>
+                                <img
+                                    key={photos[photoIndex]}
+                                    src={photos[photoIndex]}
+                                    alt="foto"
+                                    loading="lazy"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                />
+                                <button
+                                    onClick={() => handleDeletePhoto(photos[photoIndex])}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '12px',
+                                        right: '12px',
+                                        background: 'rgba(239, 68, 68, 0.85)',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        width: '36px',
+                                        height: '36px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        color: 'white',
+                                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                                        transition: 'all 0.2s',
+                                        zIndex: 10
+                                    }}
+                                    title="Excluir esta foto"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            </>
                         ) : (
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                                 Sem fotos
@@ -361,7 +436,7 @@ const ProfileEvaluation = ({ onCountChange }) => {
                         {/* Approved toggle */}
                         <div>
                             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: '0 0 0.75rem' }}>Decisão</p>
-                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <div className="eval-decision-buttons">
                                 <button
                                     onClick={() => setAprovado(true)}
                                     style={{
@@ -390,7 +465,7 @@ const ProfileEvaluation = ({ onCountChange }) => {
                         </div>
 
                         {/* Action buttons */}
-                        <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--glass-border)' }}>
+                        <div className="eval-action-buttons">
                             <button
                                 onClick={() => setShowDeleteConfirm(true)}
                                 disabled={deleting}

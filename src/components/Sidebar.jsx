@@ -28,7 +28,7 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadReports, unre
         background: 'var(--bg-secondary)', // Solid bg for mobile readability
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3rem' }}>
+      <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ background: 'var(--accent-gradient)', padding: '0.5rem', borderRadius: '8px' }}>
             <ShieldCheck size={24} color="white" />
@@ -104,7 +104,7 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadReports, unre
         })}
       </nav>
 
-      <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
+      <div className="sidebar-admin" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{
             width: '40px',
@@ -125,7 +125,7 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadReports, unre
         </div>
       </div>
       {/* Logout */}
-      <div style={{ padding: '1.5rem 0 0' }}> {/* Adjusted padding to align with the top section */}
+      <div className="sidebar-logout" style={{ padding: '1.5rem 0 0' }}> {/* Adjusted padding to align with the top section */}
         <button
           onClick={onLogout}
           style={{

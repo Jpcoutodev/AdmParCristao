@@ -247,13 +247,34 @@ export default function FinanceiroView() {
   const totalRecurringCred = activeRecurringCredits.reduce((s, c) => s + Number(c.amount), 0);
   const balance = totalRecurringCred - totalRecurringExp;
 
-  // Grand totals (all expenses and credits ever)
-  const grandTotalExp = activeExpenses.reduce((s, e) => s + Number(e.amount), 0);
-  const grandTotalCred = activeCredits.reduce((s, c) => s + Number(c.amount), 0);
-
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
+
+  // Grand totals (all expenses and credits ever — expanded recurring entries)
+  const expandForTotal = (item, type) => {
+    if (!item.is_recurring || item.status !== 'active') {
+      return [item];
+    }
+    const entries = [];
+    const created = new Date(item.created_at);
+    let y = created.getFullYear(), m = created.getMonth();
+    while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth())) {
+      const day = Math.min(item.due_day, new Date(y, m + 1, 0).getDate());
+      const entryDate = new Date(y, m, day);
+      if (entryDate > now) { m++; if (m > 11) { m = 0; y++; } continue; }
+      entries.push(item);
+      m++;
+      if (m > 11) { m = 0; y++; }
+    }
+    return entries;
+  };
+  const grandTotalExpEntries = activeExpenses.flatMap(e => expandForTotal(e, 'expense'));
+  const grandTotalCredEntries = activeCredits.flatMap(c => expandForTotal(c, 'credit'));
+  const grandTotalExp = grandTotalExpEntries.reduce((s, e) => s + Number(e.amount), 0);
+  const grandTotalCred = grandTotalCredEntries.reduce((s, c) => s + Number(c.amount), 0);
+
+
   const oneOffExpThisMonth = expenses.filter(e => !e.is_recurring && e.status === 'active' && e.expense_date && new Date(e.expense_date).getMonth() === currentMonth && new Date(e.expense_date).getFullYear() === currentYear);
   const oneOffCredThisMonth = credits.filter(c => !c.is_recurring && c.status === 'active' && c.credit_date && new Date(c.credit_date).getMonth() === currentMonth && new Date(c.credit_date).getFullYear() === currentYear);
   const totalOneOffExp = oneOffExpThisMonth.reduce((s, e) => s + Number(e.amount), 0);
@@ -387,7 +408,7 @@ export default function FinanceiroView() {
             <span className="fin-card-label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total Despesas</span>
           </div>
           <span className="fin-card-value" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ef4444' }}>{fmt(grandTotalExp)}</span>
-          <span className="fin-card-sub" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activeExpenses.length} lançamentos</span>
+          <span className="fin-card-sub" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{grandTotalExpEntries.length} lançamentos</span>
         </div>
         <div className="fin-card" style={cardStyle('#22c55e')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -395,7 +416,7 @@ export default function FinanceiroView() {
             <span className="fin-card-label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total Créditos</span>
           </div>
           <span className="fin-card-value" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#22c55e' }}>{fmt(grandTotalCred)}</span>
-          <span className="fin-card-sub" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activeCredits.length} lançamentos</span>
+          <span className="fin-card-sub" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{grandTotalCredEntries.length} lançamentos</span>
         </div>
         <div className="fin-card" style={cardStyle(balance >= 0 ? '#22c55e' : '#ef4444')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

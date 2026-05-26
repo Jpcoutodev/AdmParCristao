@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { ShieldAlert, Check, X, User, FileText, Image, MessageSquare } from 'lucide-react';
+import { ShieldAlert, Check, X, User, FileText, Image, MessageSquare, Trash2 } from 'lucide-react';
 
 const ModerationList = () => {
     const [items, setItems] = useState([]);
@@ -104,6 +104,19 @@ const ModerationList = () => {
                     // Also delete moderation item
                     await supabase.from('moderation').delete().eq('id', item.id);
                     alert('Perfil excluído com sucesso.');
+                } else if (action === 'delete_image_only') {
+                    // Remove only the flagged image from the profile, keep the user
+                    if (item.profile_id && item.image) {
+                        const profile = item.profiles;
+                        if (profile && profile.image_urls) {
+                            const updatedImages = profile.image_urls.filter(url => url !== item.image);
+                            const { error } = await supabase.from('profiles').update({ image_urls: updatedImages }).eq('id', item.profile_id);
+                            if (error) throw error;
+                        }
+                    }
+                    // Delete moderation item
+                    await supabase.from('moderation').delete().eq('id', item.id);
+                    alert('Imagem removida do perfil com sucesso. Usuário mantido.');
                 }
             } else if (item.type === 'post') {
                 if (action === 'approve') {
@@ -126,6 +139,15 @@ const ModerationList = () => {
                     // Delete moderation item
                     await supabase.from('moderation').delete().eq('id', item.id);
                     alert('Post excluído com sucesso.');
+                } else if (action === 'delete_post_and_profile') {
+                    // Delete profile
+                    if (item.profile_id) {
+                        const { error } = await supabase.from('profiles').delete().eq('id', item.profile_id);
+                        if (error) throw error;
+                    }
+                    // Delete moderation item
+                    await supabase.from('moderation').delete().eq('id', item.id);
+                    alert('Post e perfil do usuário excluídos com sucesso.');
                 }
             } else if (item.type === 'comment') {
                 if (action === 'delete_comment') {
@@ -137,6 +159,15 @@ const ModerationList = () => {
                     // Delete moderation item
                     await supabase.from('moderation').delete().eq('id', item.id);
                     alert('Comentário excluído com sucesso.');
+                } else if (action === 'delete_comment_and_profile') {
+                    // Delete profile
+                    if (item.profile_id) {
+                        const { error } = await supabase.from('profiles').delete().eq('id', item.profile_id);
+                        if (error) throw error;
+                    }
+                    // Delete moderation item
+                    await supabase.from('moderation').delete().eq('id', item.id);
+                    alert('Comentário e perfil do usuário excluídos com sucesso.');
                 }
             }
 
@@ -283,30 +314,54 @@ const ModerationList = () => {
                                 )}
 
                                 {item.type === 'image' && (
-                                    <button
-                                        onClick={() => handleAction(item, 'delete_profile')}
-                                        style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.5)', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
-                                    >
-                                        <X size={18} /> Excluir Perfil da Pessoa
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={() => handleAction(item, 'delete_image_only')}
+                                            style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.5)', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
+                                        >
+                                            <Trash2 size={18} /> Excluir Apenas a Imagem
+                                        </button>
+                                        <button
+                                            onClick={() => handleAction(item, 'delete_profile')}
+                                            style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.5)', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
+                                        >
+                                            <X size={18} /> Excluir Perfil da Pessoa
+                                        </button>
+                                    </>
                                 )}
 
                                 {item.type === 'post' && (
-                                    <button
-                                        onClick={() => handleAction(item, 'delete_post')}
-                                        style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.5)', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
-                                    >
-                                        <X size={18} /> Excluir Post
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={() => handleAction(item, 'delete_post')}
+                                            style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.5)', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
+                                        >
+                                            <Trash2 size={18} /> Excluir Apenas o Post
+                                        </button>
+                                        <button
+                                            onClick={() => handleAction(item, 'delete_post_and_profile')}
+                                            style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.5)', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
+                                        >
+                                            <X size={18} /> Excluir Post e Perfil da Pessoa
+                                        </button>
+                                    </>
                                 )}
 
                                 {item.type === 'comment' && (
-                                    <button
-                                        onClick={() => handleAction(item, 'delete_comment')}
-                                        style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.5)', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
-                                    >
-                                        <X size={18} /> Excluir Comentário
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={() => handleAction(item, 'delete_comment')}
+                                            style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.5)', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
+                                        >
+                                            <Trash2 size={18} /> Excluir Apenas o Comentário
+                                        </button>
+                                        <button
+                                            onClick={() => handleAction(item, 'delete_comment_and_profile')}
+                                            style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.5)', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
+                                        >
+                                            <X size={18} /> Excluir Comentário e Perfil da Pessoa
+                                        </button>
+                                    </>
                                 )}
 
                                 {/* Fallback delete for unknown types or generic removal */}
