@@ -320,20 +320,45 @@ export default function FinanceiroView() {
 
       data.push({ name: label, despesas: recExp + oExp, creditos: recCred + oCred, saldo: (recCred + oCred) - (recExp + oExp) });
     }
-    // Calcular balanço geral: soma de todos os registros (cada um contado 1x) até aquele mês
-    data.forEach((d, idx) => {
-      const mDate = new Date(currentYear, currentMonth - (11 - idx) + 1, 0); // fim do mês
-      let tExp = 0;
-      expenses.filter(e => e.status === 'active').forEach(e => {
-        const dt = e.expense_date ? parseLocalDate(e.expense_date) : new Date(e.created_at);
-        if (dt <= mDate) tExp += Number(e.amount);
-      });
-      let tCred = 0;
-      credits.filter(c => c.status === 'active').forEach(c => {
-        const dt = c.credit_date ? parseLocalDate(c.credit_date) : new Date(c.created_at);
-        if (dt <= mDate) tCred += Number(c.amount);
-      });
-      d.balancoGeral = tCred - tExp;
+    // Calcular balanço geral: soma acumulada dos saldos mensais
+    // Incluir saldo pré-período (itens recorrentes e pontuais antes da janela de 12 meses)
+    const firstChartDate = new Date(currentYear, currentMonth - 11, 1);
+    let preBalance = 0;
+    // Recorrentes: meses antes da janela do gráfico
+    expenses.filter(e => e.is_recurring && e.status === 'active').forEach(e => {
+      const created = new Date(e.created_at);
+      let y = created.getFullYear(), m = created.getMonth();
+      while (new Date(y, m, 1) < firstChartDate) {
+        if (created.getFullYear() < y || (created.getFullYear() === y && created.getMonth() <= m)) {
+          preBalance -= Number(e.amount);
+        }
+        m++; if (m > 11) { m = 0; y++; }
+      }
+    });
+    credits.filter(c => c.is_recurring && c.status === 'active').forEach(c => {
+      const created = new Date(c.created_at);
+      let y = created.getFullYear(), m = created.getMonth();
+      while (new Date(y, m, 1) < firstChartDate) {
+        if (created.getFullYear() < y || (created.getFullYear() === y && created.getMonth() <= m)) {
+          preBalance += Number(c.amount);
+        }
+        m++; if (m > 11) { m = 0; y++; }
+      }
+    });
+    // Pontuais antes da janela do gráfico
+    expenses.filter(e => !e.is_recurring && e.status === 'active' && e.expense_date).forEach(e => {
+      const dt = parseLocalDate(e.expense_date);
+      if (dt < firstChartDate) preBalance -= Number(e.amount);
+    });
+    credits.filter(c => !c.is_recurring && c.status === 'active' && c.credit_date).forEach(c => {
+      const dt = parseLocalDate(c.credit_date);
+      if (dt < firstChartDate) preBalance += Number(c.amount);
+    });
+
+    let cumulativeBalance = preBalance;
+    data.forEach((d) => {
+      cumulativeBalance += d.saldo;
+      d.balancoGeral = cumulativeBalance;
     });
     return data;
   }, [expenses, credits, currentMonth, currentYear]);
