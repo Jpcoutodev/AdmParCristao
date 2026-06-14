@@ -6,6 +6,16 @@ import { supabase } from '../lib/supabase';
 // ─── Helpers ───
 const fmt = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+// Parseia data YYYY-MM-DD como horário local (evita bug de fuso horário UTC)
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return new Date(NaN);
+  // Se for string no formato YYYY-MM-DD, parsear manualmente como local
+  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(dateStr);
+};
 
 const cardStyle = (color) => ({
   background: `linear-gradient(135deg, ${color}22 0%, ${color}08 100%)`,
@@ -141,7 +151,7 @@ function ItemList({ items, type, onEdit, onToggle, onDelete }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: '0.95rem', fontWeight: 500, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.description}</p>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
-                  {item.is_recurring ? `Todo dia ${item.due_day}` : new Date(item.expense_date || item.credit_date).toLocaleDateString('pt-BR')}
+                  {item.is_recurring ? `Todo dia ${item.due_day}` : parseLocalDate(item.expense_date || item.credit_date).toLocaleDateString('pt-BR')}
                   {item.status !== 'active' && ` · ${item.status === 'paused' ? 'Pausado' : 'Cancelado'}`}
                 </p>
               </div>
@@ -275,8 +285,8 @@ export default function FinanceiroView() {
   const grandTotalCred = grandTotalCredEntries.reduce((s, c) => s + Number(c.amount), 0);
 
 
-  const oneOffExpThisMonth = expenses.filter(e => !e.is_recurring && e.status === 'active' && e.expense_date && new Date(e.expense_date).getMonth() === currentMonth && new Date(e.expense_date).getFullYear() === currentYear);
-  const oneOffCredThisMonth = credits.filter(c => !c.is_recurring && c.status === 'active' && c.credit_date && new Date(c.credit_date).getMonth() === currentMonth && new Date(c.credit_date).getFullYear() === currentYear);
+  const oneOffExpThisMonth = expenses.filter(e => !e.is_recurring && e.status === 'active' && e.expense_date && parseLocalDate(e.expense_date).getMonth() === currentMonth && parseLocalDate(e.expense_date).getFullYear() === currentYear);
+  const oneOffCredThisMonth = credits.filter(c => !c.is_recurring && c.status === 'active' && c.credit_date && parseLocalDate(c.credit_date).getMonth() === currentMonth && parseLocalDate(c.credit_date).getFullYear() === currentYear);
   const totalOneOffExp = oneOffExpThisMonth.reduce((s, e) => s + Number(e.amount), 0);
   const totalOneOffCred = oneOffCredThisMonth.reduce((s, c) => s + Number(c.amount), 0);
 
@@ -305,8 +315,8 @@ export default function FinanceiroView() {
       });
 
       // One-off in this month
-      const oExp = expenses.filter(e => !e.is_recurring && e.expense_date && new Date(e.expense_date).getMonth() === m && new Date(e.expense_date).getFullYear() === y).reduce((s, e) => s + Number(e.amount), 0);
-      const oCred = credits.filter(c => !c.is_recurring && c.credit_date && new Date(c.credit_date).getMonth() === m && new Date(c.credit_date).getFullYear() === y).reduce((s, c) => s + Number(c.amount), 0);
+      const oExp = expenses.filter(e => !e.is_recurring && e.expense_date && parseLocalDate(e.expense_date).getMonth() === m && parseLocalDate(e.expense_date).getFullYear() === y).reduce((s, e) => s + Number(e.amount), 0);
+      const oCred = credits.filter(c => !c.is_recurring && c.credit_date && parseLocalDate(c.credit_date).getMonth() === m && parseLocalDate(c.credit_date).getFullYear() === y).reduce((s, c) => s + Number(c.amount), 0);
 
       data.push({ name: label, despesas: recExp + oExp, creditos: recCred + oCred, saldo: (recCred + oCred) - (recExp + oExp) });
     }
@@ -315,12 +325,12 @@ export default function FinanceiroView() {
       const mDate = new Date(currentYear, currentMonth - (11 - idx) + 1, 0); // fim do mês
       let tExp = 0;
       expenses.filter(e => e.status === 'active').forEach(e => {
-        const dt = e.expense_date ? new Date(e.expense_date) : new Date(e.created_at);
+        const dt = e.expense_date ? parseLocalDate(e.expense_date) : new Date(e.created_at);
         if (dt <= mDate) tExp += Number(e.amount);
       });
       let tCred = 0;
       credits.filter(c => c.status === 'active').forEach(c => {
-        const dt = c.credit_date ? new Date(c.credit_date) : new Date(c.created_at);
+        const dt = c.credit_date ? parseLocalDate(c.credit_date) : new Date(c.created_at);
         if (dt <= mDate) tCred += Number(c.amount);
       });
       d.balancoGeral = tCred - tExp;
@@ -362,7 +372,7 @@ export default function FinanceiroView() {
     let merged = [...exp, ...cred];
     if (tableFilter === 'expense') merged = exp;
     if (tableFilter === 'credit') merged = cred;
-    let sorted = merged.sort((a, b) => new Date(b._sortDate) - new Date(a._sortDate));
+    let sorted = merged.sort((a, b) => parseLocalDate(b._sortDate) - parseLocalDate(a._sortDate));
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       sorted = sorted.filter(e => e.description.toLowerCase().includes(term));
@@ -526,8 +536,8 @@ export default function FinanceiroView() {
                 const isExp = entry._type === 'expense';
                 const color = isExp ? '#ef4444' : '#22c55e';
                 const date = entry._generated
-                  ? new Date(entry._sortDate).toLocaleDateString('pt-BR')
-                  : new Date(entry.expense_date || entry.credit_date).toLocaleDateString('pt-BR');
+                  ? parseLocalDate(entry._sortDate).toLocaleDateString('pt-BR')
+                  : parseLocalDate(entry.expense_date || entry.credit_date).toLocaleDateString('pt-BR');
                 return (
                   <tr key={`${entry.id}-${idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.2s' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
