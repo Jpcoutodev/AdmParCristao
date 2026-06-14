@@ -300,23 +300,33 @@ export default function FinanceiroView() {
       const label = `${monthNames[m]}/${String(y).slice(2)}`;
 
       // Recurring: items created before or during this month AND active
+      // No mês atual, só incluir se o due_day já passou
+      const isCurrentMonth = (m === now.getMonth() && y === now.getFullYear());
       let recExp = 0, recCred = 0;
       expenses.filter(e => e.is_recurring && e.status === 'active').forEach(e => {
         const created = new Date(e.created_at);
         if (created.getFullYear() < y || (created.getFullYear() === y && created.getMonth() <= m)) {
+          if (isCurrentMonth) {
+            const day = Math.min(e.due_day, new Date(y, m + 1, 0).getDate());
+            if (day > now.getDate()) return; // due_day ainda não chegou
+          }
           recExp += Number(e.amount);
         }
       });
       credits.filter(c => c.is_recurring && c.status === 'active').forEach(c => {
         const created = new Date(c.created_at);
         if (created.getFullYear() < y || (created.getFullYear() === y && created.getMonth() <= m)) {
+          if (isCurrentMonth) {
+            const day = Math.min(c.due_day, new Date(y, m + 1, 0).getDate());
+            if (day > now.getDate()) return; // due_day ainda não chegou
+          }
           recCred += Number(c.amount);
         }
       });
 
       // One-off in this month
-      const oExp = expenses.filter(e => !e.is_recurring && e.expense_date && parseLocalDate(e.expense_date).getMonth() === m && parseLocalDate(e.expense_date).getFullYear() === y).reduce((s, e) => s + Number(e.amount), 0);
-      const oCred = credits.filter(c => !c.is_recurring && c.credit_date && parseLocalDate(c.credit_date).getMonth() === m && parseLocalDate(c.credit_date).getFullYear() === y).reduce((s, c) => s + Number(c.amount), 0);
+      const oExp = expenses.filter(e => !e.is_recurring && e.status === 'active' && e.expense_date && parseLocalDate(e.expense_date).getMonth() === m && parseLocalDate(e.expense_date).getFullYear() === y).reduce((s, e) => s + Number(e.amount), 0);
+      const oCred = credits.filter(c => !c.is_recurring && c.status === 'active' && c.credit_date && parseLocalDate(c.credit_date).getMonth() === m && parseLocalDate(c.credit_date).getFullYear() === y).reduce((s, c) => s + Number(c.amount), 0);
 
       data.push({ name: label, despesas: recExp + oExp, creditos: recCred + oCred, saldo: (recCred + oCred) - (recExp + oExp) });
     }
