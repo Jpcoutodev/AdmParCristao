@@ -1,12 +1,13 @@
-import { LayoutDashboard, ShieldCheck, AlertTriangle, X, LogOut, Crown, TrendingUp, Heart, UserX, Bug, ShieldAlert, ClipboardList, DollarSign } from 'lucide-react';
+import { LayoutDashboard, ShieldCheck, AlertTriangle, X, LogOut, Crown, TrendingUp, Heart, UserX, Bug, ShieldAlert, ClipboardList, DollarSign, Eye } from 'lucide-react';
 
-const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadReports, unreadVerifications, activeBugsCount, unapprovedCount, onLogout }) => {
+const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose, unreadReports, unreadVerifications, activeBugsCount, unapprovedCount, watchlistCount, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'publico', label: 'Público', icon: TrendingUp },
     { id: 'funnel', label: 'Funil', icon: TrendingUp },
     { id: 'engagement', label: 'Engajamento', icon: Heart },
     { id: 'profile_eval', label: 'Avaliação', icon: ClipboardList, badgeCount: unapprovedCount },
+    { id: 'watchlist', label: 'Observação', icon: Eye, badgeCount: watchlistCount },
     { id: 'moderation', label: 'Moderação', icon: ShieldAlert },
     { id: 'verification', label: 'Verificação', icon: ShieldCheck, badgeCount: unreadVerifications },
     { id: 'reports', label: 'Denúncias', icon: AlertTriangle, badgeCount: unreadReports },

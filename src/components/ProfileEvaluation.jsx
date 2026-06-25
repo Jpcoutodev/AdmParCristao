@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle, SkipForward, PartyPopper, Loader2, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, SkipForward, PartyPopper, Loader2, Trash2, Eye } from 'lucide-react';
 
 const PAGE_SIZE = 20;
 
@@ -14,6 +14,9 @@ const ProfileEvaluation = ({ onCountChange }) => {
     const [deleting, setDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [photoIndex, setPhotoIndex] = useState(0);
+    const [showWatchModal, setShowWatchModal] = useState(false);
+    const [watchReason, setWatchReason] = useState('');
+    const [watchSaving, setWatchSaving] = useState(false);
     const [totalCount, setTotalCount] = useState(0);
 
     // Local editable state for the current card
@@ -211,6 +214,27 @@ const ProfileEvaluation = ({ onCountChange }) => {
     };
 
     const handleSkip = () => advanceQueue();
+
+    const handleWatch = async () => {
+        const profile = queue[index];
+        if (!profile) return;
+        setWatchSaving(true);
+
+        const { error } = await supabase.from('watched_profiles').upsert({
+            profile_id: profile.id,
+            reason: watchReason.trim() || null,
+        }, { onConflict: 'profile_id' });
+
+        if (error) {
+            console.error('Error adding to watchlist:', error);
+            alert('Erro ao adicionar à observação.');
+        } else {
+            setShowWatchModal(false);
+            setWatchReason('');
+            advanceQueue();
+        }
+        setWatchSaving(false);
+    };
 
     const profile = queue[index];
     const photos = profile?.image_urls?.filter(Boolean) || [];
@@ -480,6 +504,18 @@ const ProfileEvaluation = ({ onCountChange }) => {
                                 {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                             </button>
                             <button
+                                onClick={() => setShowWatchModal(true)}
+                                title="Colocar em observação"
+                                style={{
+                                    padding: '0.75rem', border: '2px solid rgba(245,158,11,0.3)', borderRadius: '10px',
+                                    background: 'rgba(245,158,11,0.08)', color: '#f59e0b', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                    fontSize: '0.9rem', fontWeight: 600, transition: 'all 0.2s'
+                                }}
+                            >
+                                <Eye size={16} />
+                            </button>
+                            <button
                                 onClick={handleSkip}
                                 style={{ padding: '0.75rem 1.25rem', border: '1px solid var(--glass-border)', borderRadius: '10px', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}
                             >
@@ -552,6 +588,70 @@ const ProfileEvaluation = ({ onCountChange }) => {
                             <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                                 Selecione "Aprovar" ou "Reprovar" para salvar
                             </p>
+                        )}
+
+                        {/* Watch modal */}
+                        {showWatchModal && (
+                            <div style={{
+                                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+                            }}>
+                                <div style={{
+                                    background: 'var(--glass-bg, #1a1a2e)', border: '1px solid var(--glass-border)',
+                                    borderRadius: '16px', padding: '2rem', maxWidth: '420px', width: '90%',
+                                    display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Eye size={20} color="#f59e0b" />
+                                        </div>
+                                        <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Colocar em Observação</h3>
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
+                                        O perfil de <strong>{profile?.name || '(sem nome)'}</strong> será adicionado à lista de observação para revisão posterior.
+                                    </p>
+                                    <div>
+                                        <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem', display: 'block' }}>Motivo (opcional)</label>
+                                        <textarea
+                                            value={watchReason}
+                                            onChange={e => setWatchReason(e.target.value)}
+                                            placeholder="Ex: foto suspeita, bio estranha..."
+                                            rows={3}
+                                            style={{
+                                                width: '100%', padding: '0.65rem', fontSize: '0.9rem',
+                                                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)',
+                                                borderRadius: '10px', color: 'var(--text-primary)', resize: 'vertical',
+                                                fontFamily: 'Inter, sans-serif', outline: 'none'
+                                            }}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                                        <button
+                                            onClick={() => { setShowWatchModal(false); setWatchReason(''); }}
+                                            style={{
+                                                padding: '0.65rem 1.5rem', border: '1px solid var(--glass-border)',
+                                                borderRadius: '10px', background: 'transparent', color: 'var(--text-muted)',
+                                                cursor: 'pointer', fontWeight: 500, fontSize: '0.9rem'
+                                            }}
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            onClick={handleWatch}
+                                            disabled={watchSaving}
+                                            style={{
+                                                padding: '0.65rem 1.5rem', border: 'none', borderRadius: '10px',
+                                                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                                color: 'white', cursor: watchSaving ? 'not-allowed' : 'pointer',
+                                                fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                opacity: watchSaving ? 0.7 : 1
+                                            }}
+                                        >
+                                            {watchSaving ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />} Observar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>

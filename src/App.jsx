@@ -13,6 +13,7 @@ import PublicoStats from './components/PublicoStats';
 import ModerationList from './components/ModerationList';
 import ProfileEvaluation from './components/ProfileEvaluation';
 import FinanceiroView from './components/FinanceiroView';
+import WatchList from './components/WatchList';
 import Login from './components/Login';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
   const [unreadVerificationsCount, setUnreadVerificationsCount] = useState(0);
   const [activeBugsCount, setActiveBugsCount] = useState(0);
   const [unapprovedCount, setUnapprovedCount] = useState(0);
+  const [watchlistCount, setWatchlistCount] = useState(0);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
   useEffect(() => {
@@ -83,6 +85,7 @@ function App() {
     fetchUnreadVerificationsCount();
     fetchActiveBugsCount();
     fetchUnapprovedCount();
+    fetchWatchlistCount();
 
     // Subscribe to changes in reports table
     const reportsSubscription = supabase
@@ -147,6 +150,13 @@ function App() {
     if (!error) setUnapprovedCount(count || 0);
   };
 
+  const fetchWatchlistCount = async () => {
+    const { count, error } = await supabase
+      .from('watched_profiles')
+      .select('*', { count: 'exact', head: true });
+    if (!error) setWatchlistCount(count || 0);
+  };
+
   const handleReportsSeen = () => {
     setUnreadReportsCount(0);
   };
@@ -189,6 +199,7 @@ function App() {
         unreadVerifications={unreadVerificationsCount}
         activeBugsCount={activeBugsCount}
         unapprovedCount={unapprovedCount}
+        watchlistCount={watchlistCount}
         onLogout={handleLogout}
       />
 
@@ -233,6 +244,7 @@ function App() {
           {activeTab === 'deletion_feedback' && <DeletionFeedbackList />}
           {activeTab === 'bugs' && <BugList />}
           {activeTab === 'profile_eval' && <ProfileEvaluation onCountChange={setUnapprovedCount} />}
+          {activeTab === 'watchlist' && <WatchList onCountChange={setWatchlistCount} />}
           {activeTab === 'financeiro' && <FinanceiroView />}
         </div>
       </main>
