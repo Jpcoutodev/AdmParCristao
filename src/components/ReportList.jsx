@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { ShieldOff, CheckCircle, Eye, X, Trash2, MessageSquareX } from 'lucide-react';
+import { ShieldOff, CheckCircle, Eye, X, Trash2, MessageSquareX, Loader2 } from 'lucide-react';
 
 const ReportList = ({ onReportsSeen }) => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState('all');
     const [selectedReport, setSelectedReport] = useState(null);
+    const [watchSaving, setWatchSaving] = useState(null);
     const selectedUser = selectedReport?.reported;
 
     useEffect(() => {
@@ -149,6 +150,27 @@ const ReportList = ({ onReportsSeen }) => {
         }
 
         fetchReports();
+    };
+
+    const handleWatchUser = async (reportId, userId, description) => {
+        if (!userId) {
+            alert('Erro: ID do usuário não encontrado');
+            return;
+        }
+        setWatchSaving(reportId);
+
+        const { error } = await supabase.from('watched_profiles').upsert({
+            profile_id: userId,
+            reason: description ? `Denúncia: ${description}` : 'Denúncia recebida',
+        }, { onConflict: 'profile_id' });
+
+        if (error) {
+            console.error('Error adding to watchlist:', error);
+            alert('Erro ao adicionar à observação.');
+        } else {
+            alert('Usuário adicionado à lista de observação!');
+        }
+        setWatchSaving(null);
     };
 
     if (loading) return <div className="flex-center" style={{ height: '100px' }}>Carregando...</div>;
@@ -306,6 +328,14 @@ const ReportList = ({ onReportsSeen }) => {
                                                 <CheckCircle size={20} />
                                             </button>
                                         )}
+                                        <button
+                                            onClick={() => handleWatchUser(report.id, report.reported?.id, report.description)}
+                                            disabled={watchSaving === report.id}
+                                            style={{ background: 'transparent', border: 'none', color: '#f59e0b', cursor: watchSaving === report.id ? 'not-allowed' : 'pointer', opacity: watchSaving === report.id ? 0.5 : 1 }}
+                                            title="Colocar em Observação"
+                                        >
+                                            {watchSaving === report.id ? <Loader2 size={20} className="animate-spin" /> : <Eye size={20} style={{ stroke: '#f59e0b' }} />}
+                                        </button>
                                         <button
                                             onClick={() => handleBanUser(report.id, report.reported?.id)}
                                             style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
