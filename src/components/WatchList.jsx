@@ -71,13 +71,13 @@ const WatchList = ({ onCountChange }) => {
 
     const fetchMessages = async (profileId) => {
         setLoadingMessages(true);
-        // Fetch messages sent by this user, with receiver profile info
+        // Fetch messages sent AND received by this user
         const { data: messagesData, error } = await supabase
             .from('messages')
             .select('id, content, created_at, receiver_id, sender_id, match_id')
-            .eq('sender_id', profileId)
+            .or(`sender_id.eq.${profileId},receiver_id.eq.${profileId}`)
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(80);
 
         if (error) {
             console.error('Error fetching messages:', error);
@@ -87,24 +87,34 @@ const WatchList = ({ onCountChange }) => {
         }
 
         if (messagesData && messagesData.length > 0) {
-            // Fetch receiver profiles
-            const receiverIds = [...new Set(messagesData.map(m => m.receiver_id).filter(Boolean))];
-            let receiversMap = {};
-            if (receiverIds.length > 0) {
-                const { data: receiversData } = await supabase
+            // Fetch all involved user profiles (senders + receivers)
+            const allUserIds = [...new Set([
+                ...messagesData.map(m => m.sender_id),
+                ...messagesData.map(m => m.receiver_id)
+            ].filter(Boolean))];
+
+            let usersMap = {};
+            if (allUserIds.length > 0) {
+                const { data: usersData } = await supabase
                     .from('profiles')
                     .select('id, name, image_urls')
-                    .in('id', receiverIds);
-                receiversMap = (receiversData || []).reduce((acc, p) => {
+                    .in('id', allUserIds);
+                usersMap = (usersData || []).reduce((acc, p) => {
                     acc[p.id] = p;
                     return acc;
                 }, {});
             }
 
-            const enrichedMessages = messagesData.map(m => ({
-                ...m,
-                receiver: receiversMap[m.receiver_id] || null,
-            }));
+            const enrichedMessages = messagesData.map(m => {
+                const isSent = m.sender_id === profileId;
+                const otherId = isSent ? m.receiver_id : m.sender_id;
+                return {
+                    ...m,
+                    isSent,
+                    otherUser: usersMap[otherId] || null,
+                    otherUserId: otherId,
+                };
+            });
             setMessages(enrichedMessages);
         } else {
             setMessages([]);
@@ -484,7 +494,10 @@ const WatchList = ({ onCountChange }) => {
                                     <div style={{ borderTop: '1px solid var(--glass-border)', padding: '1rem 1.25rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
                                             <MessageSquare size={16} color="#3b82f6" />
-                                            <h4 style={{ margin: 0, fontSize: '0.9rem' }}>Mensagens enviadas</h4>
+                                            <h4 style={{ margin: 0, fontSize: '0.9rem' }}>Conversas do usuário</h4>
+                                            {messages.length > 0 && (
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.25rem' }}>({messages.length})</span>
+                                            )}
                                         </div>
 
                                         {loadingMessages ? (
@@ -493,29 +506,46 @@ const WatchList = ({ onCountChange }) => {
                                             </div>
                                         ) : messages.length === 0 ? (
                                             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '1rem 0' }}>
-                                                Nenhuma mensagem enviada por este usuário.
+                                                Nenhuma mensagem encontrada para este usuário.
                                             </p>
                                         ) : (
                                             <div style={{
-                                                maxHeight: '300px', overflowY: 'auto',
-                                                display: 'flex', flexDirection: 'column', gap: '0.5rem'
+                                                maxHeight: '400px', overflowY: 'auto',
+                                                display: 'flex', flexDirection: 'column', gap: '0.4rem'
                                             }}>
                                                 {messages.map(msg => (
                                                     <div key={msg.id} style={{
-                                                        padding: '0.65rem 0.85rem',
-                                                        background: 'rgba(255,255,255,0.03)',
+                                                        padding: '0.6rem 0.85rem',
+                                                        background: msg.isSent ? 'rgba(59,130,246,0.06)' : 'rgba(16,185,129,0.06)',
                                                         borderRadius: '10px',
-                                                        border: '1px solid rgba(255,255,255,0.05)'
+                                                        border: `1px solid ${msg.isSent ? 'rgba(59,130,246,0.12)' : 'rgba(16,185,129,0.12)'}`
                                                     }}>
                                                         <div style={{
                                                             display: 'flex', justifyContent: 'space-between',
-                                                            alignItems: 'center', marginBottom: '0.3rem'
+                                                            alignItems: 'flex-start', marginBottom: '0.3rem', gap: '0.5rem', flexWrap: 'wrap'
                                                         }}>
-                                                            <span style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 500 }}>
-                                                                → {msg.receiver?.name || 'Usuário desconhecido'}
-                                                            </span>
-                                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                                                {formatMessageDate(msg.created_at)}
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                                                <span style={{
+                                                                    fontSize: '0.72rem', fontWeight: 600,
+                                                                    color: msg.isSent ? '#3b82f6' : '#10b981',
+                                                                    padding: '1px 6px', borderRadius: '4px',
+                                                                    background: msg.isSent ? 'rgba(59,130,246,0.12)' : 'rgba(16,185,129,0.12)'
+                                                                }}>
+                                                                    {msg.isSent ? '↑ Enviou' : '↓ Recebeu'}
+                                                                </span>
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                                                                    {msg.isSent ? '→' : '←'} {msg.otherUser?.name || 'Usuário desconhecido'}
+                                                                </span>
+                                                                <span style={{
+                                                                    fontSize: '0.65rem', color: 'var(--text-muted)',
+                                                                    fontFamily: 'monospace', background: 'rgba(255,255,255,0.05)',
+                                                                    padding: '1px 5px', borderRadius: '4px'
+                                                                }}>
+                                                                    {msg.otherUserId ? msg.otherUserId.substring(0, 8) + '...' : '---'}
+                                                                </span>
+                                                            </div>
+                                                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                                                                {formatDate(msg.created_at)}
                                                             </span>
                                                         </div>
                                                         <p style={{
